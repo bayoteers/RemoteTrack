@@ -17,6 +17,28 @@ use Bugzilla::Extension::RemoteSync::Util;
 
 our $VERSION = '0.01';
 
+sub db_schema_abstract_schema {
+    my ($self, $args) = @_;
+    my $schema = $args->{schema};
+
+    # Tables for storing the SyncSource objects
+    $schema->{sync_source} = {
+        FIELDS => [
+            id => { TYPE => 'SMALLSERIAL', NOTNULL => 1, PRIMARYKEY => 1 },
+            name => { TYPE => 'varchar(64)', NOTNULL => 1, },
+            type => { TYPE => 'TINYTEXT', NOTNULL => 1, },
+            base_url => { TYPE => 'MEDIUMTEXT', NOTNULL => 1, },
+            from_email => { TYPE => 'TINYTEXT', NOTNULL => 0, },
+        ],
+        INDEXES => [
+            sync_source_name_unique_idx => {
+                FIELDS => ['name'],
+                TYPE => 'UNIQUE',
+            },
+        ],
+    };
+}
+
 sub install_update_db {
     my ($self, $args) = @_;
 
