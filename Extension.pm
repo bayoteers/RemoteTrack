@@ -14,8 +14,21 @@ use strict;
 use base qw(Bugzilla::Extension);
 
 use Bugzilla::Extension::RemoteSync::Util;
+use Bugzilla::Extension::RemoteSync::Pages;
+use Bugzilla::Extension::RemoteSync::Source;
 
 our $VERSION = '0.01';
+
+sub install_before_final_checks {
+    my ($self, $args) = @_;
+    print "Checking RemoteSync Source types...\n" unless $args->{silent};
+    for my $type (Bugzilla::Extension::RemoteSync::Source->TYPES) {
+        eval "require $type"
+            or die("RemoteSync Source type $type not found");
+        $type->isa("Bugzilla::Extension::RemoteSync::Source")
+            or die("type $type does not inherit Bugzilla::Extension::RemoteSync::Source")
+    }
+}
 
 sub db_schema_abstract_schema {
     my ($self, $args) = @_;
@@ -42,6 +55,17 @@ sub db_schema_abstract_schema {
 sub install_update_db {
     my ($self, $args) = @_;
 
+}
+
+sub page_before_template {
+    my ($self, $params) = @_;
+    my ($page) = $params->{page_id} =~/^rs_(.+)$/;
+    return unless defined $page;
+    $page =~ s/\./_/;
+    my $handler = Bugzilla::Extension::RemoteSync::Pages->can($page);
+    if (defined $handler) {
+        $handler->($params->{vars});
+    }
 }
 
 __PACKAGE__->NAME;
