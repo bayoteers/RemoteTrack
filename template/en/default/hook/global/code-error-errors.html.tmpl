@@ -11,4 +11,6 @@
 
 [% IF error == "remotesync_email_error" %]
   RemoteSync inbound email handling failed: [% err FILTER html %]
+[% ELSIF error == "remotesync_type_not_found" %]
+  The source handler of type '[% type FILTER html %]' was not found.
 [% END %]

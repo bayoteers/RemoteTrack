@@ -141,6 +141,8 @@ sub new {
     my $class = shift;
     my $obj = $class->SUPER::new(@_);
     if (defined $obj) {
+        eval "require ".$obj->type or ThrowCodeError(
+            "remotesync_type_not_found", {type => $obj->type});
         bless $obj, $obj->type;
     }
     return $obj;
