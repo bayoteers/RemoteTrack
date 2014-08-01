@@ -9,6 +9,32 @@
   # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
   #%]
 
+[% javascript = BLOCK %]
+
+var setSourceOptions = function(cls) {
+  var clsid = cls.replace(/::/g, '_');
+  var options_template = $('#options_templates #' + clsid).clone().attr('id', null);
+
+  [% IF source.defined %]
+  var options = [% source.options_json %];
+  for (var key in options) {
+    options_template.find("[name=option_"+key+"]").val(options[key]);
+  }
+  [% END %]
+
+  $('#options').children().not('legend').remove();
+  $('#options').append(options_template);
+}
+
+$(function() {
+  var cls = $('[name=class]');
+  setSourceOptions(cls.val());
+  cls.change(function() {
+    setSourceOptions(cls.val());
+  });
+})
+[% END %]
+
 [% PROCESS global/header.html.tmpl
     title = "RemoteSync Source"
 %]
@@ -17,7 +43,6 @@
   <tr>
     <th>Name</th>
     <th>Type</th>
-    <th>From email</th>
   </tr>
 [% FOR s IN sources %]
   <tr>
@@ -25,8 +50,7 @@
       <a href="page.cgi?id=rs_source.html&amp;source_id=[% s.id FILTER html %]">
       [% s.name FILTER html %]
     </a></td>
-    <td>[% s.type FILTER html %]</td>
-    <td>[% s.from_email FILTER html %]</td>
+    <td>[% s.class FILTER html %]</td>
     <td>
       <form action="page.cgi?id=rs_source.html" method="POST"
           onsubmit="return confirm('Are you sure you want to delete \'[% s.name FILTER js %]\'');">
@@ -54,28 +78,26 @@
       <td><input name="name" value="[% source.name FILTER html %]"/></td>
     </tr>
     <tr>
-      <th>Type:</th>
+      <th>See Also Type:</th>
       <td>
         [% IF action == 'new' %]
-        <select name="type">
-          [% FOR type IN source_types %]
-          <option value="[% type FILTER html %]"
-            [% 'selected="selected"' IF type == source.type %]
-          >[% type FILTER html %]</option>
+        <select name="class">
+          [% FOR class IN source_classes.keys %]
+          <option value="[% class FILTER html %]">[% class FILTER html %]</option>
           [% END %]
         </select>
         [% ELSE %]
-        [% source.type FILTER html %]
+        [% source.class FILTER html %]
+        <input type="hidden" name="class" value="[% source.class FILTER html %]">
         [% END %]
       </td>
     </tr>
     <tr>
-      <th>From Email:</th>
-      <td><input name="from_email" value="[% source.from_email FILTER html %]"/></td>
-    </tr>
-    <tr>
-      <th>Base URL:</th>
-      <td><input name="base_url" value="[% source.base_url FILTER html %]"/></td>
+      <td colspan="2">
+        <fieldset id="options">
+          <legend>Options</legend>
+        </fieldset>
+      </td>
     </tr>
   </table>
   [% IF source.defined %]
@@ -88,5 +110,20 @@
   <button type="submit">Cancel</button>
 </form>
 [% END %]
+
+<div id="options_templates" style="display:none;">
+  <table id="Bugzilla_BugUrl_Bugzilla">
+    <tr>
+      <th>Base URL:</th>
+      <td><input name="option_base_url"></td>
+    </tr>
+    <tr>
+      <th>From email:</th>
+      <td><input name="option_from_email"></td>
+    </tr>
+  </table>
+
+  [% Hook.process("source_options") %]
+</div>
 
 [% PROCESS global/footer.html.tmpl %]

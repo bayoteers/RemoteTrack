@@ -29,60 +29,96 @@ use Bugzilla::Error;
 use Bugzilla::Hook;
 use Bugzilla::Util qw(trick_taint trim);
 
+use JSON;
 use Scalar::Util qw(blessed);
+
 
 use base qw(Bugzilla::Object);
 
 
-use constant DB_TABLE => 'sync_source';
+use constant DB_TABLE => 'remotesync_source';
 
 use constant DB_COLUMNS => qw(
     id
     name
-    type
-    base_url
-    from_email
+    class
+    options
 );
 
 use constant UPDATE_COLUMNS => qw(
     name
-    base_url
-    from_email
+    options
 );
 
 use constant VALIDATORS => {
     name => \&_check_name,
-    type => \&_check_type,
-    from_email => \&_check_email,
+    class => \&_check_class,
+    options => \&_check_options,
 };
 
-sub TYPES {
-    my $cache = Bugzilla->request_cache;
-    unless (defined $cache->{remotesync_types}) {
-        my @types = qw(
-            Bugzilla::Extension::RemoteSync::Source::Bugzilla
+use constant VALIDATOR_DEPENDENCIES => {
+    options => ['class'],
+};
+
+sub CLASSES {
+    my $cache = Bugzilla->process_cache;
+    unless (defined $cache->{remotesync_classes}) {
+        my %classes = (
+            'Bugzilla::BugUrl::Bugzilla' =>
+                'Bugzilla::Extension::RemoteSync::Source::Bugzilla',
         );
-        Bugzilla::Hook->process('remote_sync_source_types', {types => \@types});
-        $cache->{remotesync_types} = [sort @types];
+        Bugzilla::Hook->process('remotesync_source_classes', {classes => \%classes});
+        $cache->{remotesync_classes} = \%classes;
     }
-    return @{$cache->{remotesync_types}};
+    return $cache->{remotesync_classes};
+}
+
+sub get_source_class {
+    my $class = shift;
+    $class = CLASSES->{$class};
+    eval "use $class"; die $@ if $@;
+    return $class;
 }
 
 #############
 # Accessors #
 #############
-sub name            { return $_[0]->{name} }
-sub type            { return $_[0]->{type} }
-sub base_url        { return $_[0]->{base_url} }
-sub from_email      { return $_[0]->{from_email} }
+sub name         { return $_[0]->{name} }
+sub class        { return $_[0]->{class} }
 
+sub options {
+    my $self = shift;
+    if (!defined $self->{options_hash}) {
+        $self->{options_hash} = $self->{options} ? decode_json($self->{options}) : {};
+    }
+    return $self->{options_hash};
+}
+
+sub options_json {
+    my $self = shift;
+    return $self->{options} || "{}";
+}
 ############
 # Mutators #
 ############
-sub set_name        { $_[0]->set('name', $_[1]); }
-sub set_type        { $_[0]->set('type', $_[1]); }
-sub set_base_url    { $_[0]->set('base_url', $_[1]); }
-sub set_from_email  { $_[0]->set('from_email', $_[1]); }
+sub set_name         { $_[0]->set('name', $_[1]); }
+sub set_class        { $_[0]->set('class', $_[1]); }
+
+sub set_options {
+    my ($self, $opts) = @_;
+    if (!ref($opts)) {
+        $opts = decode_json($opts);
+    }
+    $self->set('options', $opts);
+    $self->{options_hash} = decode_json($self->{options});
+}
+
+sub set_option {
+    my ($self, $key, $value) = @_;
+    my %opts = %{$self->options};
+    $opts{$key} = $value;
+    $self->set_options(\%opts);
+}
 
 ##############
 # Validators #
@@ -105,32 +141,35 @@ sub _check_name {
     return $name;
 }
 
-sub _check_type {
+sub _check_class {
     my ($invocant, $value) = @_;
-    my $type = trim($value);
+    my $class = trim($value);
     ThrowUserError('invalid_parameter', {
-            name => 'type',
-            err => 'Name must not be empty'})
-        unless $type;
+            name => 'class',
+            err => 'Class must be defined'})
+        unless $class;
     ThrowUserError('invalid_parameter', {
-            name => 'type',
-            err => "'$type' is not a valid sync source type"})
-        unless (grep {$type eq $_} TYPES);
-    return $type;
+            name => 'class',
+            err => "'$class' is not a valid sync source class"})
+        unless defined CLASSES->{$class};
+    return $class;
 }
 
-sub _check_email {
-    my ($invocant, $value, $name) = @_;
-    my $addr_spec = $Email::Address::addr_spec;
-    if ($value !~ /\P{ASCII}/ && $value =~ /^$addr_spec$/) {
-        trick_taint($value);
-        return $value
-    } else {
-        ThrowUserError('invalid_parameter', {
-            name => $name,
-            err => "'$value' is not a valid email address"
-        });
+sub _check_options {
+    my ($invocant, $opts, undef, $params) = @_;
+    my $class = blessed($invocant) ? $invocant : get_source_class($params->{class});
+    $opts ||= {};
+    if (!ref($opts)) {
+        $opts = decode_json($opts);
     }
+    $opts = $class->check_options($opts);
+    return encode_json($opts);
+}
+
+sub check_options {
+    my $class = shift;
+    $class = blessed($class) ? ref($class) : $class;
+    die "$class does not implement check_options()";
 }
 
 ###########
@@ -141,11 +180,40 @@ sub new {
     my $class = shift;
     my $obj = $class->SUPER::new(@_);
     if (defined $obj) {
-        eval "require ".$obj->type or ThrowCodeError(
-            "remotesync_type_not_found", {type => $obj->type});
-        bless $obj, $obj->type;
+        my $type = CLASSES->{$obj->class};
+        eval "use $type"; die $@ if $@;
+        bless $obj, $type;
     }
     return $obj;
+}
+
+sub create {
+    my $class = shift;
+    my $obj = $class->SUPER::create(@_);
+    my $type = CLASSES->{$obj->class};
+    eval "use $type"; die $@ if $@;
+    bless $obj, $type;
+    return $obj;
+}
+
+sub _do_list_select {
+    my $class = shift;
+    my $objects = $class->SUPER::_do_list_select(@_);
+
+    foreach my $obj (@$objects) {
+        my $type = CLASSES->{$obj->class};
+        eval "use $type"; die $@ if $@;
+        bless $obj, $type;
+    }
+    return $objects
+}
+
+sub is_valid_url {
+    my ($self, $url) = @_;
+    my $uri = new URI($url);
+    my $base = $self->base_url;
+    return ($self->class->should_handle($uri) && $url =~ qr/^$base/ ) ?
+           1 : 0;
 }
 
 1;

@@ -27,26 +27,60 @@ use base qw(Bugzilla::Extension::RemoteSync::Source);
 
 use Bugzilla::Error;
 
+use constant see_also_class => "Bugzilla::BugUrl::Bugzilla";
+
+
+sub check_options {
+    my ($invocant, $options) = @_;
+    for my $key (keys %$options) {
+        if ($key eq 'base_url') {
+            my $uri = URI->new($options->{base_url});
+            ThrowUserError('invalid_parameter', {
+                name => 'options->base_url',
+                err => 'base_url has to be http(s)://...'}
+            ) unless ($uri->scheme =~ /https?/);
+            $options->{base_url} = $uri->scheme . ":" . $uri->opaque;
+        } elsif ($key eq 'from_email') {
+            my $value = $options->{from_email};
+            unless ($value !~ /\P{ASCII}/
+                && $value =~ /^${Email::Address::addr_spec}$/)
+            {
+                ThrowUserError('invalid_parameter', {
+                    name => 'from email',
+                    err => "'$value' is not a valid email address"
+                });
+            }
+        } else {
+            delete $options->{$key};
+        }
+    }
+    if (!defined $options->{base_url}) {
+        ThrowUserError('invalid_parameter', {
+            name => 'options->base_url',
+            err => 'base_url is required' });
+    }
+    return $options;
+}
+
 sub handle_mail_notification {
     my ($self, $email) = shift;
     my $bz_url = $email->header('X-Bugzilla-URL') || '';
-    if ($self->base_url ne $bz_url) {
-        ThrowCodeError('remotesync_email_error', {
-            err => "X-Bugzilla-URL '$bz_url' does not match source base url "
-                   . $self->base_url
-        });
-    }
-    my ($id) = $email->header('Subject') =~ /\[.+ (\d+)\]/;
+    my $from = $email->header('From');
+    return 0 if ($self->options->{base_url} ne $bz_url
+                 || $self->options->{from_email} ne $from);
+
+    my $msgid = $email->header('Message-ID');
+    my ($id) = $msgid =~ /^<bug-(\d*)-/;
     if ($id) {
         #TODO process the mail here and trigger sync
         print("Bug#$id at ${bz_url}show_bug.cgi?id=$id "
             . $email->header('X-Bugzilla-Type'));
     } else {
         ThrowCodeError('remotesync_email_error', {
-            err => "Failed to parse bug ID from subject '"
-                   . $email->header('Subject') . "'"
+            err => "Failed to parse bug ID from message ID '$msgid'",
         });
     }
+    return 1;
 }
 
 1;

@@ -22,11 +22,11 @@ our $VERSION = '0.01';
 sub install_before_final_checks {
     my ($self, $args) = @_;
     print "Checking RemoteSync Source types...\n" unless $args->{silent};
-    for my $type (Bugzilla::Extension::RemoteSync::Source->TYPES) {
-        eval "require $type"
-            or die("RemoteSync Source type $type not found");
-        $type->isa("Bugzilla::Extension::RemoteSync::Source")
-            or die("type $type does not inherit Bugzilla::Extension::RemoteSync::Source")
+    for my $class (values %{Bugzilla::Extension::RemoteSync::Source->CLASSES}) {
+        eval "require $class"
+            or die("RemoteSync Source class $class not found");
+        $class->isa("Bugzilla::Extension::RemoteSync::Source")
+            or die("type $class does not inherit Bugzilla::Extension::RemoteSync::Source")
     }
 }
 
@@ -35,13 +35,12 @@ sub db_schema_abstract_schema {
     my $schema = $args->{schema};
 
     # Tables for storing the SyncSource objects
-    $schema->{sync_source} = {
+    $schema->{remotesync_source} = {
         FIELDS => [
             id => { TYPE => 'SMALLSERIAL', NOTNULL => 1, PRIMARYKEY => 1 },
             name => { TYPE => 'varchar(64)', NOTNULL => 1, },
-            type => { TYPE => 'TINYTEXT', NOTNULL => 1, },
-            base_url => { TYPE => 'MEDIUMTEXT', NOTNULL => 1, },
-            from_email => { TYPE => 'TINYTEXT', NOTNULL => 0, },
+            class => { TYPE => 'TINYTEXT', NOTNULL => 1, },
+            options => { TYPE => 'MEDIUMTEXT', NOTNULL => 1, },
         ],
         INDEXES => [
             sync_source_name_unique_idx => {

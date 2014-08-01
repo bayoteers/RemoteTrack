@@ -131,22 +131,16 @@ if (!$stdin_select->can_read(0)) {
 my $mail_text = join("", <STDIN>);
 $email_in = Email::MIME->new($mail_text);
 
-my $from = $email_in->header('From') || '';
-my $source = $from ?
-    Bugzilla::Extension::RemoteSync::Source->new({from_email => $from}) :
-    undef;
-unless (defined $source) {
-    my $msg = "Unrecognized sender '$from'";
-    print_log($msg);
-    mail_admin($msg);
-    exit;
+my $handled = 0;
+for my $source (Bugzilla::Extension::RemoteSync::Source->get_all) {
+    next unless $source->can('handle_mail_notification');
+    if ($source->handle_mail_notification($email_in)) {
+        $handled = 1;
+        last;
+    }
 }
-
-my $handler = $source->can('handle_mail_notification');
-if (defined $handler) {
-    $handler->($email_in);
-} else {
-    my $msg = $source->type." cant handle email notifications";
+if (!$handled) {
+    my $msg = "Failed to handle email";
     print_log($msg);
     mail_admin($msg);
 }

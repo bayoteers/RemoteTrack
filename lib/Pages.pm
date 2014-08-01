@@ -24,24 +24,30 @@ sub source_html {
             action => 'access'
         }) unless Bugzilla->user->in_group('admin');
 
-	my $cgi = Bugzilla->cgi;
-	my $source_id = $cgi->param('source_id');
-	my $action = $cgi->param('action') || '';
+	my $input = Bugzilla->input_params;
+	my $source_id = delete $input->{source_id};
+	my $action = delete $input->{action} || '';
 	my $source;
 	if ($source_id) {
 		$source = Bugzilla::Extension::RemoteSync::Source->check({id=>$source_id});
 	}
 	if ($action eq 'save') {
 		my $params = {
-			name => $cgi->param('name'),
-			type => $cgi->param('type'),
-			from_email => $cgi->param('from_email'),
-			base_url => $cgi->param('base_url'),
+			name => delete $input->{name},
 		};
+		my %options;
+		for my $key (keys %$input) {
+			($key) = $key =~ /option_(.*)/;
+			next unless $key;
+			$options{$key} = delete $input->{"option_$key"};
+		}
+		$params->{options} = \%options;
+
 		if ($source) {
 			$source->set_all($params);
 			$source->update();
 		} else {
+			$params->{class} = delete $input->{class};
 			$source = Bugzilla::Extension::RemoteSync::Source->create($params);
 		}
 	} elsif ($action eq 'delete' && defined $source) {
@@ -51,7 +57,7 @@ sub source_html {
 		$vars->{source} = $source;
 	}
 	$vars->{action} = $action;
-	$vars->{source_types} = [Bugzilla::Extension::RemoteSync::Source->TYPES];
+	$vars->{source_classes} = Bugzilla::Extension::RemoteSync::Source->CLASSES;
 	$vars->{sources} = [Bugzilla::Extension::RemoteSync::Source->get_all()];
 }
 
