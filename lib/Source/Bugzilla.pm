@@ -83,4 +83,11 @@ sub handle_mail_notification {
     return 1;
 }
 
+sub is_valid_url {
+    my ($self, $url) = @_;
+    return 0 unless $self->SUPER::is_valid_url($url);
+    my $base = $self->options->{base_url};
+    return ($url =~ /^$base/) ? 1 : 0;
+}
+
 1;

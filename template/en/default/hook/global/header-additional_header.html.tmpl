@@ -1,0 +1,75 @@
+[% bug_templates = [
+  'bug/show.html.tmpl',
+  'bug/create/created.html.tmpl',
+  'bug/process/results.html.tmpl'
+  ] %]
+[% IF bug_templates.contains(template.name) %]
+  <script type="text/javascript">
+    var REMOTESYNC_URL = "[% bug.remotesync_url FILTER js %]";
+
+    var addRemoteSyncUrlSwitch = function(item, url) {
+      var input = $("<input>")
+        .attr("type", "radio")
+        .attr("name", "remotesync_url")
+        .attr("value", url);
+      if (REMOTESYNC_URL == url) {
+        input.attr("checked", "checked");
+        if (url) {
+          item.css('font-weight', 'bold');
+        }
+      }
+      var label = $("<label>").append(input).append(url ? "Track" : "No tracking");
+      item.append("<br>").append(label);
+    }
+
+    $(function() {
+      var seeAlsoUrls = [];
+      $("ul.bug_urls > li").each(function() {
+        var item = $(this);
+        var url = item.find("a").first().attr('href');
+        seeAlsoUrls.push(url);
+      })
+
+      if(seeAlsoUrls.length == 0) return;
+
+      new Rpc("RemoteSync", "valid_urls", {urls: seeAlsoUrls})
+      .done(function(result) {
+        result.forEach(function(url) {
+          var link = $("ul.bug_urls a[href='" + url +"']");
+          if (link.size() == 0) return;
+          addRemoteSyncUrlSwitch(link.parent(), url);
+        })
+        if(result.length > 0) {
+          var noTrackLi = $("<li>");
+          $("ul.bug_urls").append(noTrackLi);
+          addRemoteSyncUrlSwitch(noTrackLi, "");
+        }
+      })
+    })
+  </script>
+[% END %]
+
+[% IF template.name == 'bug/create/create.html.tmpl' %]
+  <script type="text/javascript">
+    $(function() {
+      var see_also = $("[name=see_also]");
+      var input = $("<input>")
+        .attr("type", "checkbox")
+        .attr("name", "remotesync_url");
+      see_also.after("Track").after(input);
+      input.change(function(ev,ui) {
+        if (input.prop('checked')) {
+          input.attr('value', see_also.val())
+        } else {
+          input.attr('value', '')
+        }
+      })
+      see_also.change(function() {
+        if (input.prop('checked')) {
+          input.attr('value', see_also.val())
+        }
+      })
+    })
+  </script>
+
+[% END %]

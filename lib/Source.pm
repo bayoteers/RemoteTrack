@@ -84,7 +84,11 @@ sub get_source_class {
 # Accessors #
 #############
 sub name         { return $_[0]->{name} }
-sub class        { return $_[0]->{class} }
+sub class {
+    my $class = $_[0]->{class};
+    eval "use $class"; die $@ if $@;
+    return $class;
+}
 
 sub options {
     my $self = shift;
@@ -211,9 +215,15 @@ sub _do_list_select {
 sub is_valid_url {
     my ($self, $url) = @_;
     my $uri = new URI($url);
-    my $base = $self->base_url;
-    return ($self->class->should_handle($uri) && $url =~ qr/^$base/ ) ?
-           1 : 0;
+    return $self->class->should_handle($uri) ? 1 : 0;
+}
+
+sub get_for_url {
+    my ($class, $url) = @_;
+    for my $source ($class->get_all) {
+        return $source if ($source->is_valid_url($url));
+    }
+    return undef;
 }
 
 1;
