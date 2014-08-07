@@ -137,6 +137,21 @@ sub _rs_url_search_operator {
     $args->{full_field} = "$table.value";
 }
 
+sub object_before_delete {
+    my ($self, $args) = @_;
+    my $obj = $args->{object};
+    if ($obj->isa('Bugzilla::BugUrl')) {
+        my $rsurl = Bugzilla::Extension::RemoteSync::Url->new({
+            condition => "bug_id = ? AND value = ?",
+            values => [$obj->bug_id, $obj->name],
+            });
+        if (defined $rsurl) {
+            $rsurl->set_active(0);
+            $rsurl->update();
+        }
+    }
+}
+
 sub object_end_of_set_all {
     my ($self, $args) = @_;
     my $bug = $args->{object};
