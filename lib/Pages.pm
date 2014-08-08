@@ -14,6 +14,8 @@ use strict;
 
 use Bugzilla;
 
+use Bugzilla::Util qw(correct_urlbase);
+
 use Bugzilla::Extension::RemoteSync::Source;
 
 sub source_html {
@@ -59,6 +61,34 @@ sub source_html {
 	$vars->{action} = $action;
 	$vars->{source_classes} = Bugzilla::Extension::RemoteSync::Source->CLASSES;
 	$vars->{sources} = [Bugzilla::Extension::RemoteSync::Source->get_all()];
+}
+
+
+sub manual_sync_html {
+    my $vars = shift;
+    my $input = Bugzilla->input_params;
+    my $bug_id = $input->{bug_id};
+    my $bug = Bugzilla::Bug->new($bug_id);
+    $vars->{bug} = $bug;
+    if(!Bugzilla->params->{remotesync_manual_sync}) {
+        $vars->{error} = "manual sync not allowed";
+        return;
+    }
+    if ($bug->remotesync_url_obj) {
+        my $old_user = Bugzilla->user;
+        Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotesync_user}));
+        eval {
+            $bug->remotesync_url_obj->remote2local();
+        };
+        Bugzilla->set_user($old_user);
+        if ($@) {
+            $vars->{error} = $@;
+        } else {
+            my $url = correct_urlbase() . "show_bug.cgi?id=$bug_id";
+            print Bugzilla->cgi->redirect('-location' =>  $url);
+            exit;
+        }
+    }
 }
 
 1;

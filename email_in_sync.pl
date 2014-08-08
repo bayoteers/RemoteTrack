@@ -113,6 +113,7 @@ sub mail_admin {
 $SIG{__DIE__} = \&die_handler;
 
 Bugzilla->usage_mode(USAGE_MODE_EMAIL);
+Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotesync_user}));
 
 # Check that RemoteSync is enabled
 unless (grep($_->isa('Bugzilla::Extension::RemoteSync'), @{Bugzilla->extensions}))

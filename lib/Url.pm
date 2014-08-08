@@ -24,7 +24,8 @@ use warnings;
 package Bugzilla::Extension::RemoteSync::Url;
 
 use Bugzilla::Error;
-use Bugzilla::Util qw(trick_taint trim);
+
+use DateTime;
 
 use base qw(Bugzilla::Object);
 
@@ -87,10 +88,67 @@ sub source {
 # Mutators #
 ############
 sub set_last_sync    { $_[0]->set('last_sync', $_[1]); }
-sub set_active       { $_[0]->set('active', $_[1]); }
+sub set_active {
+    my ($self, $value) = @_;
+    if (!$self->{active} && $value) {
+        $self->last_sync_now();
+    }
+    $self->set('active', $value);
+}
+
+sub last_sync_now {
+    my $self = shift;
+    $self->set('last_sync', DateTime->now(time_zone => Bugzilla->local_timezone));
+}
 
 ##############
 # Validators #
 ##############
+
+###############
+# Sync methos #
+###############
+
+sub new_comments {
+    my $self = shift;
+    return undef unless $self->source->can('fetch_comments');
+    return $self->source->fetch_comments($self->value, $self->last_sync);
+}
+
+sub new_status_changes {
+    my $self = shift;
+    return undef unless $self->source->can('fetch_status_changes');
+    return $self->source->fetch_status_changes($self->value, $self->last_sync);
+}
+
+sub remote2local {
+    my $self = shift;
+    my @comments = @{$self->new_comments || []};
+    my @status_changes = @{$self->new_status_changes || []};
+    if (@comments || @status_changes) {
+        my $vars = {
+            comments => \@comments,
+            states => \@status_changes,
+            url=> $self->value
+        };
+        my $message;
+        my $template = Bugzilla->template;
+        $template->process('remotesync/local_comment.txt.tmpl', $vars, \$message)
+            || ThrowTemplateError($template->error());
+
+        Bugzilla->dbh->bz_start_transaction;
+        $self->bug->add_comment($message);
+        $self->bug->update();
+        $self->last_sync_now();
+        $self->update();
+        Bugzilla->dbh->bz_commit_transaction;
+
+        Bugzilla::BugMail::Send($self->bug->bug_id, { changer => Bugzilla->user });
+        return 1;
+    }
+    $self->last_sync_now();
+    $self->update();
+    return 0;
+}
 
 1;

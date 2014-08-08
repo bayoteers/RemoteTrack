@@ -1,0 +1,18 @@
+Remote tracking item [% url FILTER none %] changed
+[% IF comments.size() %]
+-----------------------------------------------------------
+[% END %]
+[% FOREACH comment IN comments %]
+* [% comment.who %] commented at [% comment.when FILTER time %]
+[%+ comment.text FILTER none %]
+
+[%+ comment.url %]
+[%+ END %]
+[% IF comments.size() %]
+-----------------------------------------------------------
+[% END %]
+[% FOREACH state IN states %]
+* [% state.who %] changed status at [% state.when FILTER time %]
+  [%+ state.from %] -> [% state.to %]
+
+[% END %]

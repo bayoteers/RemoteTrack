@@ -200,6 +200,14 @@ sub create {
     return $obj;
 }
 
+sub get_for_url {
+    my ($class, $url) = @_;
+    for my $source ($class->get_all) {
+        return $source if ($source->is_valid_url($url));
+    }
+    return undef;
+}
+
 sub _do_list_select {
     my $class = shift;
     my $objects = $class->SUPER::_do_list_select(@_);
@@ -212,18 +220,11 @@ sub _do_list_select {
     return $objects
 }
 
+
 sub is_valid_url {
     my ($self, $url) = @_;
     my $uri = new URI($url);
     return $self->class->should_handle($uri) ? 1 : 0;
-}
-
-sub get_for_url {
-    my ($class, $url) = @_;
-    for my $source ($class->get_all) {
-        return $source if ($source->is_valid_url($url));
-    }
-    return undef;
 }
 
 1;

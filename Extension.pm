@@ -34,6 +34,11 @@ sub install_before_final_checks {
     }
 }
 
+sub config_add_panels {
+    my ($self, $args) = @_;
+    $args->{panel_modules}->{RemoteSync} = "Bugzilla::Extension::RemoteSync::Params";
+}
+
 sub db_schema_abstract_schema {
     my ($self, $args) = @_;
     my $schema = $args->{schema};
@@ -242,6 +247,12 @@ BEGIN {
     if ($url ne $self->remotesync_url) {
         $self->{new_remotesync_url} = $url;
     }
+};
+
+*Bugzilla::Bug::remotesync_url_obj = sub {
+    my $self = shift;
+    $self->remotesync_url;
+    return $self->{remotesync_url_obj};
 };
 
 } # END BEGIN

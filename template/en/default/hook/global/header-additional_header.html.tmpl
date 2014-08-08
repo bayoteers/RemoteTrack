@@ -45,31 +45,11 @@
           addRemoteSyncUrlSwitch(noTrackLi, "");
         }
       })
+
+      [% IF Param('remotesync_manual_sync') && bug.remotesync_url %]
+      $("ul.bug_urls").append($('<li><a href="page.cgi?id=rs_manual_sync.html&amp;bug_id=[% bug.id %]">Manual sync</a></li>'))
+      [% END %]
     })
   </script>
 [% END %]
 
-[% IF template.name == 'bug/create/create.html.tmpl' %]
-  <script type="text/javascript">
-    $(function() {
-      var see_also = $("[name=see_also]");
-      var input = $("<input>")
-        .attr("type", "checkbox")
-        .attr("name", "remotesync_url");
-      see_also.after("Track").after(input);
-      input.change(function(ev,ui) {
-        if (input.prop('checked')) {
-          input.attr('value', see_also.val())
-        } else {
-          input.attr('value', '')
-        }
-      })
-      see_also.change(function() {
-        if (input.prop('checked')) {
-          input.attr('value', see_also.val())
-        }
-      })
-    })
-  </script>
-
-[% END %]
