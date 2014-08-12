@@ -8,15 +8,15 @@
 # Copyright (C) 2014 Jolla Ltd.
 # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
 
-package Bugzilla::Extension::RemoteSync;
+package Bugzilla::Extension::RemoteTrack;
 use warnings;
 use strict;
 use base qw(Bugzilla::Extension);
 
-use Bugzilla::Extension::RemoteSync::Util;
-use Bugzilla::Extension::RemoteSync::Pages;
-use Bugzilla::Extension::RemoteSync::Source;
-use Bugzilla::Extension::RemoteSync::Url;
+use Bugzilla::Extension::RemoteTrack::Util;
+use Bugzilla::Extension::RemoteTrack::Pages;
+use Bugzilla::Extension::RemoteTrack::Source;
+use Bugzilla::Extension::RemoteTrack::Url;
 
 use Bugzilla::Constants;
 use Bugzilla::Error;
@@ -25,18 +25,18 @@ our $VERSION = '0.01';
 
 sub install_before_final_checks {
     my ($self, $args) = @_;
-    print "Checking RemoteSync Source types...\n" unless $args->{silent};
-    for my $class (values %{Bugzilla::Extension::RemoteSync::Source->CLASSES}) {
+    print "Checking RemoteTrack Source types...\n" unless $args->{silent};
+    for my $class (values %{Bugzilla::Extension::RemoteTrack::Source->CLASSES}) {
         eval "require $class"
-            or die("RemoteSync Source class $class not found");
-        $class->isa("Bugzilla::Extension::RemoteSync::Source")
-            or die("type $class does not inherit Bugzilla::Extension::RemoteSync::Source")
+            or die("RemoteTrack Source class $class not found");
+        $class->isa("Bugzilla::Extension::RemoteTrack::Source")
+            or die("type $class does not inherit Bugzilla::Extension::RemoteTrack::Source")
     }
 }
 
 sub config_add_panels {
     my ($self, $args) = @_;
-    $args->{panel_modules}->{RemoteSync} = "Bugzilla::Extension::RemoteSync::Params";
+    $args->{panel_modules}->{RemoteTrack} = "Bugzilla::Extension::RemoteTrack::Params";
 }
 
 sub db_schema_abstract_schema {
@@ -44,7 +44,7 @@ sub db_schema_abstract_schema {
     my $schema = $args->{schema};
 
     # Tables for storing the SyncSource objects
-    $schema->{remotesync_source} = {
+    $schema->{remotetrack_source} = {
         FIELDS => [
             id => { TYPE => 'SMALLSERIAL', NOTNULL => 1, PRIMARYKEY => 1 },
             name => { TYPE => 'varchar(64)', NOTNULL => 1, },
@@ -52,7 +52,7 @@ sub db_schema_abstract_schema {
             options => { TYPE => 'MEDIUMTEXT', NOTNULL => 1, },
         ],
         INDEXES => [
-            sync_source_name_unique_idx => {
+            track_source_name_unique_idx => {
                 FIELDS => ['name'],
                 TYPE => 'UNIQUE',
             },
@@ -60,7 +60,7 @@ sub db_schema_abstract_schema {
     };
 
     # Tables for storing the Url objects
-    $schema->{remotesync_url} = {
+    $schema->{remotetrack_url} = {
         FIELDS => [
             id => { TYPE => 'SMALLSERIAL', NOTNULL => 1, PRIMARYKEY => 1 },
             bug_id => {
@@ -76,7 +76,7 @@ sub db_schema_abstract_schema {
                 TYPE => 'INT2',
                 NOTNULL => 1,
                 REFERENCES => {
-                    TABLE => 'remotesync_source',
+                    TABLE => 'remotetrack_source',
                     COLUMN => 'id',
                     DELETE => 'CASCADE',
                 },
@@ -92,10 +92,10 @@ sub db_schema_abstract_schema {
 
 sub install_update_db {
     my ($self, $args) = @_;
-    my $field = Bugzilla::Field->new({ name => 'remotesync_url' });
+    my $field = Bugzilla::Field->new({ name => 'remotetrack_url' });
     if (!defined $field) {
         $field = Bugzilla::Field->create({
-            name        => 'remotesync_url',
+            name        => 'remotetrack_url',
             description => 'Remote Sync URL',
             type        => FIELD_TYPE_FREETEXT,
             enter_bug   => 1,
@@ -108,18 +108,18 @@ sub install_update_db {
 sub buglist_columns {
     my ($self, $args) = @_;
     my $columns = $args->{columns};
-    $columns->{"remotesync_url"} = {
-        name => "bug_rs_url.value",
+    $columns->{"remotetrack_url"} = {
+        name => "map_remotetrack_url.value",
         title => "Remote Sync URL" };
 }
 
 sub buglist_column_joins {
     my ($self, $args) = @_;
     my $joins = $args->{column_joins};
-    $joins->{"remotesync_url"} = {
-        table => "remotesync_url",
-        as => "bug_rs_url",
-        extra => ["bug_rs_url.active = 1"],
+    $joins->{"remotetrack_url"} = {
+        table => "remotetrack_url",
+        as => "map_remotetrack_url",
+        extra => ["map_remotetrack_url.active = 1"],
     };
 }
 
@@ -127,15 +127,15 @@ sub search_operator_field_override {
     my ($self, $args) = @_;
     my $operators = $args->{'operators'};
 
-    $operators->{'remotesync_url'}->{_default} = \&_rs_url_search_operator;
+    $operators->{'remotetrack_url'}->{_default} = \&_rt_url_search_operator;
 }
 
-sub _rs_url_search_operator {
+sub _rt_url_search_operator {
     my ($self, $args) = @_;
     my ($chart_id, $joins) = @$args{qw(chart_id joins)};
-    my $table = "bug_rs_url_$chart_id";
+    my $table = "map_remotetrack_url_$chart_id";
     push(@$joins, {
-        table => "remotesync_url",
+        table => "remotetrack_url",
         as => $table,
         extra => ["$table.active = 1"],
     });
@@ -146,13 +146,13 @@ sub object_before_delete {
     my ($self, $args) = @_;
     my $obj = $args->{object};
     if ($obj->isa('Bugzilla::BugUrl')) {
-        my $rsurl = Bugzilla::Extension::RemoteSync::Url->new({
+        my $rt_url = Bugzilla::Extension::RemoteTrack::Url->new({
             condition => "bug_id = ? AND value = ?",
             values => [$obj->bug_id, $obj->name],
             });
-        if (defined $rsurl) {
-            $rsurl->set_active(0);
-            $rsurl->update();
+        if (defined $rt_url) {
+            $rt_url->set_active(0);
+            $rt_url->update();
         }
     }
 }
@@ -164,13 +164,13 @@ sub object_end_of_set_all {
         Bugzilla->usage_mode == USAGE_MODE_BROWSER &&
         $bug->isa("Bugzilla::Bug")
     );
-    # If we are editing bug via browser, we need to manually set remotesync_url,
+    # If we are editing bug via browser, we need to manually set remotetrack_url,
     # because it is not included in set_all in process_bug.cgi
     my $cgi = Bugzilla->cgi;
     my $dontchange = $cgi->param('dontchange') || '';
-    my $url = $cgi->param('remotesync_url');
+    my $url = $cgi->param('remotetrack_url');
     return if ($dontchange && $url eq $dontchange);
-    $bug->set_remotesync_url($url);
+    $bug->set_remotetrack_url($url);
 }
 
 sub object_end_of_update {
@@ -178,46 +178,46 @@ sub object_end_of_update {
     my ($obj, $old_obj, $changes) = @$args{qw(object old_object changes)};
 
     if ($obj->isa("Bugzilla::Bug")) {
-        # Update remote sync url if it has been changed
-        if ($obj->remotesync_url ne $old_obj->remotesync_url) {
-            if (defined $obj->{remotesync_url_obj}) {
-                $obj->{remotesync_url_obj}->set_active(0);
-                $obj->{remotesync_url_obj}->update();
-                delete $obj->{remotesync_url_obj};
+        # Update remote tracking url if it has been changed
+        if ($obj->remotetrack_url ne $old_obj->remotetrack_url) {
+            if (defined $obj->{remotetrack_url_obj}) {
+                $obj->{remotetrack_url_obj}->set_active(0);
+                $obj->{remotetrack_url_obj}->update();
+                delete $obj->{remotetrack_url_obj};
             }
-            if ($obj->remotesync_url) {
-                my $urlobj = Bugzilla::Extension::RemoteSync::Url->new({
+            if ($obj->remotetrack_url) {
+                my $urlobj = Bugzilla::Extension::RemoteTrack::Url->new({
                     condition => "bug_id = ? AND value = ?",
-                    values => [$obj->id, $obj->remotesync_url]
+                    values => [$obj->id, $obj->remotetrack_url]
                 });
                 if (defined $urlobj) {
                     $urlobj->set_active(1);
                     $urlobj->update();
                 } else {
-                    my $source = Bugzilla::Extension::RemoteSync::Source->get_for_url(
-                        $obj->remotesync_url);
-                    ThrowUserError("remotesync_no_source_for_url", {
-                        url => $obj->remotesync_url }) unless defined $source;
-                    $urlobj = Bugzilla::Extension::RemoteSync::Url->create({
+                    my $source = Bugzilla::Extension::RemoteTrack::Source->get_for_url(
+                        $obj->remotetrack_url);
+                    ThrowUserError("remotetrack_no_source_for_url", {
+                        url => $obj->remotetrack_url }) unless defined $source;
+                    $urlobj = Bugzilla::Extension::RemoteTrack::Url->create({
                         bug_id => $obj->id, source_id => $source->id, active => 1,
-                        value => $obj->remotesync_url,
+                        value => $obj->remotetrack_url,
                     });
                 }
-                $obj->{remotesync_url_obj} = $urlobj;
-                delete $obj->{new_remotesync_url};
+                $obj->{remotetrack_url_obj} = $urlobj;
+                delete $obj->{new_remotetrack_url};
             }
-            $changes->{'remotesync_url'} = [ $old_obj->remotesync_url,
-                    $obj->remotesync_url ];
+            $changes->{'remotetrack_url'} = [ $old_obj->remotetrack_url,
+                    $obj->remotetrack_url ];
         }
     }
 }
 
 sub page_before_template {
     my ($self, $params) = @_;
-    my ($page) = $params->{page_id} =~/^rs_(.+)$/;
+    my ($page) = $params->{page_id} =~/^rt_(.+)$/;
     return unless defined $page;
     $page =~ s/\./_/;
-    my $handler = Bugzilla::Extension::RemoteSync::Pages->can($page);
+    my $handler = Bugzilla::Extension::RemoteTrack::Pages->can($page);
     if (defined $handler) {
         $handler->($params->{vars});
     }
@@ -225,34 +225,34 @@ sub page_before_template {
 
 sub webservice {
     my ($self, $args) = @_;
-    $args->{dispatch}->{'RemoteSync'} =
-        "Bugzilla::Extension::RemoteSync::WebService";
+    $args->{dispatch}->{'RemoteTrack'} =
+        "Bugzilla::Extension::RemoteTrack::WebService";
 }
 
 BEGIN {
-*Bugzilla::Bug::remotesync_url = sub {
+*Bugzilla::Bug::remotetrack_url = sub {
     my $self = shift;
-    if (defined $self->{new_remotesync_url}) {
-        return $self->{new_remotesync_url};
-    } elsif (!exists $self->{remotesync_url_obj}) {
-        $self->{remotesync_url_obj} = Bugzilla::Extension::RemoteSync::Url->new(
+    if (defined $self->{new_remotetrack_url}) {
+        return $self->{new_remotetrack_url};
+    } elsif (!exists $self->{remotetrack_url_obj}) {
+        $self->{remotetrack_url_obj} = Bugzilla::Extension::RemoteTrack::Url->new(
             {condition => "bug_id = ? AND active = 1", values => [$self->id] });
     }
-    return $self->{remotesync_url_obj} ? $self->{remotesync_url_obj}->value : '';
+    return $self->{remotetrack_url_obj} ? $self->{remotetrack_url_obj}->value : '';
 };
 
-*Bugzilla::Bug::set_remotesync_url = sub {
+*Bugzilla::Bug::set_remotetrack_url = sub {
     my ($self, $url) = @_;
     $url ||= '';
-    if ($url ne $self->remotesync_url) {
-        $self->{new_remotesync_url} = $url;
+    if ($url ne $self->remotetrack_url) {
+        $self->{new_remotetrack_url} = $url;
     }
 };
 
-*Bugzilla::Bug::remotesync_url_obj = sub {
+*Bugzilla::Bug::remotetrack_url_obj = sub {
     my $self = shift;
-    $self->remotesync_url;
-    return $self->{remotesync_url_obj};
+    $self->remotetrack_url;
+    return $self->{remotetrack_url_obj};
 };
 
 } # END BEGIN

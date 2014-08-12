@@ -14,7 +14,7 @@ Installation
 
 1. Put extension files in
 
-        extensions/RemoteSync
+        extensions/RemoteTrack
 
 2. Run checksetup.pl
 

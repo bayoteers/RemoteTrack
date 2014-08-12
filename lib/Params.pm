@@ -8,19 +8,19 @@
 # Copyright (C) 2014 Jolla Ltd.
 # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
 
-package Bugzilla::Extension::RemoteSync::Params;
+package Bugzilla::Extension::RemoteTrack::Params;
 use warnings;
 use strict;
 
 sub get_param_list {
     return (
         {
-            name => 'remotesync_user',
+            name => 'remotetrack_user',
             type => 't',
             default => '',
             checker => \&_check_user,
         }, {
-            name => 'remotesync_manual_sync',
+            name => 'remotetrack_manual_sync',
             type => 'b',
             default => 0,
         }

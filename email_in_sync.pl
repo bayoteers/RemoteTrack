@@ -113,14 +113,14 @@ sub mail_admin {
 $SIG{__DIE__} = \&die_handler;
 
 Bugzilla->usage_mode(USAGE_MODE_EMAIL);
-Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotesync_user}));
+Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotetrack_user}));
 
-# Check that RemoteSync is enabled
-unless (grep($_->isa('Bugzilla::Extension::RemoteSync'), @{Bugzilla->extensions}))
+# Check that RemoteTrack is enabled
+unless (grep($_->isa('Bugzilla::Extension::RemoteTrack'), @{Bugzilla->extensions}))
 {
-    die "RemoteSync extension is not enabled in Bugzilla";
+    die "RemoteTrack extension is not enabled in Bugzilla";
 }
-require Bugzilla::Extension::RemoteSync::Source;
+require Bugzilla::Extension::RemoteTrack::Source;
 
 # Check that there is something to read from stdin
 my $stdin_select = IO::Select->new(\*STDIN);
@@ -133,7 +133,7 @@ my $mail_text = join("", <STDIN>);
 $email_in = Email::MIME->new($mail_text);
 
 my $handled = 0;
-for my $source (Bugzilla::Extension::RemoteSync::Source->get_all) {
+for my $source (Bugzilla::Extension::RemoteTrack::Source->get_all) {
     next unless $source->can('handle_mail_notification');
     if ($source->handle_mail_notification($email_in)) {
         $handled = 1;
@@ -174,11 +174,11 @@ Reads and processes an email from STDIN (the standard input).
 
 =head1 DESCRIPTION
 
-This script processes inbound email notifications from remote sync sources
+This script processes inbound email notifications from remote tracking sources
 to allow triggering any sync operations required.
 
 The script will use the incoming email's From header to get configured
-RemoteSync::Source object from DB and if that source type has
+RemoteTrack::Source object from DB and if that source type has
 handle_email_notification method, it will pass the incoming mail there for
 further processing.
 

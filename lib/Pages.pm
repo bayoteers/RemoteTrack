@@ -8,7 +8,7 @@
 # Copyright (C) 2014 Jolla Ltd.
 # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
 
-package Bugzilla::Extension::RemoteSync::Pages;
+package Bugzilla::Extension::RemoteTrack::Pages;
 use warnings;
 use strict;
 
@@ -16,7 +16,7 @@ use Bugzilla;
 
 use Bugzilla::Util qw(correct_urlbase);
 
-use Bugzilla::Extension::RemoteSync::Source;
+use Bugzilla::Extension::RemoteTrack::Source;
 
 sub source_html {
     my $vars = shift;
@@ -31,7 +31,7 @@ sub source_html {
     my $action = delete $input->{action} || '';
     my $source;
     if ($source_id) {
-        $source = Bugzilla::Extension::RemoteSync::Source->check({id=>$source_id});
+        $source = Bugzilla::Extension::RemoteTrack::Source->check({id=>$source_id});
     }
     if ($action eq 'save') {
         my $params = {
@@ -50,7 +50,7 @@ sub source_html {
             $source->update();
         } else {
             $params->{class} = delete $input->{class};
-            $source = Bugzilla::Extension::RemoteSync::Source->create($params);
+            $source = Bugzilla::Extension::RemoteTrack::Source->create($params);
         }
     } elsif ($action eq 'delete' && defined $source) {
         $source->remove_from_db();
@@ -59,8 +59,8 @@ sub source_html {
         $vars->{source} = $source;
     }
     $vars->{action} = $action;
-    $vars->{source_classes} = Bugzilla::Extension::RemoteSync::Source->CLASSES;
-    $vars->{sources} = [Bugzilla::Extension::RemoteSync::Source->get_all()];
+    $vars->{source_classes} = Bugzilla::Extension::RemoteTrack::Source->CLASSES;
+    $vars->{sources} = [Bugzilla::Extension::RemoteTrack::Source->get_all()];
 }
 
 
@@ -70,15 +70,15 @@ sub manual_sync_html {
     my $bug_id = $input->{bug_id};
     my $bug = Bugzilla::Bug->new($bug_id);
     $vars->{bug} = $bug;
-    if(!Bugzilla->params->{remotesync_manual_sync}) {
+    if(!Bugzilla->params->{remotetrack_manual_sync}) {
         $vars->{error} = "manual sync not allowed";
         return;
     }
-    if ($bug->remotesync_url_obj) {
+    if ($bug->remotetrack_url_obj) {
         my $old_user = Bugzilla->user;
-        Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotesync_user}));
+        Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotetrack_user}));
         eval {
-            $bug->remotesync_url_obj->remote2local();
+            $bug->remotetrack_url_obj->remote2local();
         };
         Bugzilla->set_user($old_user);
         if ($@) {

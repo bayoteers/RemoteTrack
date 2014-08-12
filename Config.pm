@@ -8,11 +8,11 @@
 # Copyright (C) 2014 Jolla Ltd.
 # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
 
-package Bugzilla::Extension::RemoteSync;
+package Bugzilla::Extension::RemoteTrack;
 use warnings;
 use strict;
 
-use constant NAME => 'RemoteSync';
+use constant NAME => 'RemoteTrack';
 
 use constant REQUIRED_MODULES => [
 ];

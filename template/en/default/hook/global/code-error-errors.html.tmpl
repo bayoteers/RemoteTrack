@@ -9,8 +9,8 @@
   # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
   #%]
 
-[% IF error == "remotesync_email_error" %]
-  RemoteSync inbound email handling failed: [% err FILTER html %]
-[% ELSIF error == "remotesync_no_source_for_url" %]
-  There is no RemoteSync Source defined which could handle URL '[% url FILTER html %]'
+[% IF error == "remotetrack_email_error" %]
+  RemoteTrack inbound email handling failed: [% err FILTER html %]
+[% ELSIF error == "remotetrack_no_source_for_url" %]
+  There is no RemoteTrack Source defined which could handle URL '[% url FILTER html %]'
 [% END %]

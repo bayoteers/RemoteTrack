@@ -5,12 +5,12 @@
   ] %]
 [% IF bug_templates.contains(template.name) %]
   <script type="text/javascript">
-    var REMOTESYNC_URL = "[% bug.remotesync_url FILTER js %]";
+    var REMOTESYNC_URL = "[% bug.remotetrack_url FILTER js %]";
 
-    var addRemoteSyncUrlSwitch = function(item, url) {
+    var addRemoteTrackUrlSwitch = function(item, url) {
       var input = $("<input>")
         .attr("type", "radio")
-        .attr("name", "remotesync_url")
+        .attr("name", "remotetrack_url")
         .attr("value", url);
       if (REMOTESYNC_URL == url) {
         input.attr("checked", "checked");
@@ -32,22 +32,22 @@
 
       if(seeAlsoUrls.length == 0) return;
 
-      new Rpc("RemoteSync", "valid_urls", {urls: seeAlsoUrls})
+      new Rpc("RemoteTrack", "valid_urls", {urls: seeAlsoUrls})
       .done(function(result) {
         result.forEach(function(url) {
           var link = $("ul.bug_urls a[href='" + url +"']");
           if (link.size() == 0) return;
-          addRemoteSyncUrlSwitch(link.parent(), url);
+          addRemoteTrackUrlSwitch(link.parent(), url);
         })
         if(result.length > 0) {
           var noTrackLi = $("<li>");
           $("ul.bug_urls").append(noTrackLi);
-          addRemoteSyncUrlSwitch(noTrackLi, "");
+          addRemoteTrackUrlSwitch(noTrackLi, "");
         }
       })
 
-      [% IF Param('remotesync_manual_sync') && bug.remotesync_url %]
-      $("ul.bug_urls").append($('<li><a href="page.cgi?id=rs_manual_sync.html&amp;bug_id=[% bug.id %]">Manual sync</a></li>'))
+      [% IF Param('remotetrack_manual_sync') && bug.remotetrack_url %]
+      $("ul.bug_urls").append($('<li><a href="page.cgi?id=rt_manual_sync.html&amp;bug_id=[% bug.id %]">Manual sync</a></li>'))
       [% END %]
     })
   </script>

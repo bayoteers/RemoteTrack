@@ -10,18 +10,18 @@
 
 =head1 NAME
 
-Bugzilla::Extension::RemoteSync::Url
+Bugzilla::Extension::RemoteTrack::Url
 
 =head1 DESCRIPTION
 
-Database object for storing bug remote sync URL.
+Database object for storing bug remote tracking URL.
 
 =cut
 
 use strict;
 use warnings;
 
-package Bugzilla::Extension::RemoteSync::Url;
+package Bugzilla::Extension::RemoteTrack::Url;
 
 use Bugzilla::Error;
 
@@ -29,7 +29,7 @@ use DateTime;
 
 use base qw(Bugzilla::Object);
 
-use constant DB_TABLE => 'remotesync_url';
+use constant DB_TABLE => 'remotetrack_url';
 
 use constant NAME_FIELD => 'value';
 use constant LIST_ORDER => 'id';
@@ -78,7 +78,7 @@ sub bug {
 sub source {
     my $self = shift;
     if (!defined $self->{source_obj}) {
-        $self->{source_obj} = Bugzilla::Extension::RemoteSync::Source->new(
+        $self->{source_obj} = Bugzilla::Extension::RemoteTrack::Source->new(
             $self->{source_id});
     }
     return $self->{source_obj};
@@ -133,7 +133,7 @@ sub remote2local {
         };
         my $message;
         my $template = Bugzilla->template;
-        $template->process('remotesync/local_comment.txt.tmpl', $vars, \$message)
+        $template->process('remotetrack/local_comment.txt.tmpl', $vars, \$message)
             || ThrowTemplateError($template->error());
 
         Bugzilla->dbh->bz_start_transaction;

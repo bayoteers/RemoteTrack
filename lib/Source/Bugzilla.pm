@@ -10,7 +10,7 @@
 
 =head1 NAME
 
-Bugzilla::Extension::RemoteSync::Source::Bugzilla
+Bugzilla::Extension::RemoteTrack::Source::Bugzilla
 
 =head1 DESCRIPTION
 
@@ -21,9 +21,9 @@ Interface for Bugzilla Source
 use strict;
 use warnings;
 
-package Bugzilla::Extension::RemoteSync::Source::Bugzilla;
+package Bugzilla::Extension::RemoteTrack::Source::Bugzilla;
 
-use base qw(Bugzilla::Extension::RemoteSync::Source);
+use base qw(Bugzilla::Extension::RemoteTrack::Source);
 
 use Bugzilla::Error;
 use Bugzilla::Util qw(datetime_from);
@@ -81,7 +81,7 @@ sub handle_mail_notification {
     my $msgid = $email->header('Message-ID');
     my ($id) = $msgid =~ /^<bug-(\d*)-/;
     if ($id) {
-        my $urls = Bugzilla::Extension::RemoteSync::Url->match(
+        my $urls = Bugzilla::Extension::RemoteTrack::Url->match(
             source_id => $self->id,
             value => $self->options->{base_url}."/show_bug.cgi?id=$id",
         );
@@ -89,7 +89,7 @@ sub handle_mail_notification {
             $url->remote2local;
         }
     } else {
-        ThrowCodeError('remotesync_email_error', {
+        ThrowCodeError('remotetrack_email_error', {
             err => "Failed to parse bug ID from message ID '$msgid'",
         });
     }

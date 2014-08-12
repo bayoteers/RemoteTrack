@@ -10,11 +10,11 @@
 
 =head1 NAME
 
-Bugzilla::Extension::RemoteSync::Source
+Bugzilla::Extension::RemoteTrack::Source
 
 =head1 DESCRIPTION
 
-Database object for storing sync source definitions.
+Database object for storing tracking source definitions.
 
 Source is inherited from L<Bugzilla::Object>.
 
@@ -23,7 +23,7 @@ Source is inherited from L<Bugzilla::Object>.
 use strict;
 use warnings;
 
-package Bugzilla::Extension::RemoteSync::Source;
+package Bugzilla::Extension::RemoteTrack::Source;
 
 use Bugzilla::Error;
 use Bugzilla::Hook;
@@ -36,7 +36,7 @@ use Scalar::Util qw(blessed);
 use base qw(Bugzilla::Object);
 
 
-use constant DB_TABLE => 'remotesync_source';
+use constant DB_TABLE => 'remotetrack_source';
 
 use constant DB_COLUMNS => qw(
     id
@@ -62,15 +62,15 @@ use constant VALIDATOR_DEPENDENCIES => {
 
 sub CLASSES {
     my $cache = Bugzilla->process_cache;
-    unless (defined $cache->{remotesync_classes}) {
+    unless (defined $cache->{remotetrack_classes}) {
         my %classes = (
             'Bugzilla::BugUrl::Bugzilla' =>
-                'Bugzilla::Extension::RemoteSync::Source::Bugzilla',
+                'Bugzilla::Extension::RemoteTrack::Source::Bugzilla',
         );
-        Bugzilla::Hook->process('remotesync_source_classes', {classes => \%classes});
-        $cache->{remotesync_classes} = \%classes;
+        Bugzilla::Hook->process('remotetrack_source_classes', {classes => \%classes});
+        $cache->{remotetrack_classes} = \%classes;
     }
-    return $cache->{remotesync_classes};
+    return $cache->{remotetrack_classes};
 }
 
 sub get_source_class {
@@ -138,7 +138,7 @@ sub _check_name {
         ThrowUserError('invalid_parameter', {
             name => 'name',
             err => "Source with name '$name' already exists"}
-        ) if defined Bugzilla::Extension::RemoteSync::Source->new(
+        ) if defined Bugzilla::Extension::RemoteTrack::Source->new(
                 {name => $name}
         );
     }
@@ -154,7 +154,7 @@ sub _check_class {
         unless $class;
     ThrowUserError('invalid_parameter', {
             name => 'class',
-            err => "'$class' is not a valid sync source class"})
+            err => "'$class' is not a valid tracking source class"})
         unless defined CLASSES->{$class};
     return $class;
 }

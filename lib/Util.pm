@@ -8,7 +8,7 @@
 # Copyright (C) 2014 Jolla Ltd.
 # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
 
-package Bugzilla::Extension::RemoteSync::Util;
+package Bugzilla::Extension::RemoteTrack::Util;
 use warnings;
 use strict;
 use base qw(Exporter);

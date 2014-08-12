@@ -8,12 +8,12 @@
 # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
 
 
-package Bugzilla::Extension::RemoteSync::WebService;
+package Bugzilla::Extension::RemoteTrack::WebService;
 use strict;
 
 use Bugzilla::Constants;
 use Bugzilla::Error;
-use Bugzilla::Extension::RemoteSync::Source;
+use Bugzilla::Extension::RemoteTrack::Source;
 
 use base qw(Bugzilla::WebService);
 
@@ -25,7 +25,7 @@ sub valid_urls {
             {param => 'urls', function => 'valid_urls'})
         unless defined $urls;
     my @valid_urls;
-    my @sources = Bugzilla::Extension::RemoteSync::Source->get_all();
+    my @sources = Bugzilla::Extension::RemoteTrack::Source->get_all();
     for my $url (@$urls) {
         my $see_also_class = Bugzilla::BugUrl->class_for($url);
         my ($source) = grep {$_->class eq $see_also_class} @sources;
