@@ -156,7 +156,9 @@ sub fetch_status_changes {
 
 sub _comment_url {
     my ($self, $bug_id, $cnum) = @_;
-    return $self->options->{base_url}."show_bug.cgi?id=$bug_id#c$cnum"
+    return defined $cnum ?
+        $self->options->{base_url}."show_bug.cgi?id=$bug_id#c$cnum" :
+        '';
 }
 
 sub _xmlrpc {
