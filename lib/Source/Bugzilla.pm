@@ -44,15 +44,17 @@ sub check_options {
             $value = $uri->scheme . ":" . $uri->opaque;
             $value .= "/" unless ($value =~ /\/$/);
         } elsif ($key eq 'from_email') {
-            unless ($value !~ /\P{ASCII}/
-                && $value =~ /^${Email::Address::addr_spec}$/)
+            unless (!$value || ($value !~ /\P{ASCII}/
+                && $value =~ /^${Email::Address::addr_spec}$/))
             {
                 ThrowUserError('invalid_parameter', {
                     name => 'from email',
                     err => "'$value' is not a valid email address"
                 });
             }
-        } else {
+        } elsif ($key eq 'post_comments') {
+            $value = $value ? 1 : 0
+        } elsif ($key ne 'username' && $key ne 'password') {
             $value = undef;
         }
         if (defined $value) {
@@ -103,9 +105,21 @@ sub is_valid_url {
     return ($url =~ /^$base/) ? 1 : 0;
 }
 
+sub _bug_id_from_url {
+    my ($self, $url) = @_;
+    ThrowCodeError('invalid_parameter',
+        {
+            name => 'url',
+            err => "URL '$url' is not a valid url for source ".$self->name,
+        }
+    ) unless $self->is_valid_url($url);
+    my ($bug_id) = $url =~ /id=(\d+)/;
+    return $bug_id;
+}
+
 sub fetch_comments {
     my ($self, $url, $since) = @_;
-    my ($bug_id) = $url =~ /id=(\d+)/;
+    my $bug_id = $self->_bug_id_from_url($url);
     my $params = {ids => [$bug_id]};
     if ($since) {
         $since = datetime_from($since);
@@ -129,7 +143,7 @@ sub fetch_comments {
 
 sub fetch_status_changes {
     my ($self, $url, $since) = @_;
-    my ($bug_id) = $url =~ /id=(\d+)/;
+    my $bug_id = $self->_bug_id_from_url($url);
     $since = $since ? datetime_from($since) : undef;
     my $params = {ids => [$bug_id]};
     my $result = $self->_xmlrpc('Bug.history', $params);
@@ -161,10 +175,50 @@ sub _comment_url {
         '';
 }
 
+sub can_post_comment {
+    my $self = shift;
+    return ($self->options->{post_comments}
+            && $self->options->{username}
+            && $self->options->{password}
+        ) ? 1 : 0;
+}
+
+sub post_comment {
+    my ($self, $url, $comment) = @_;
+    return 0 unless $self->can_post_comment;
+    my $bug_id = $self->_bug_id_from_url($url);
+    my $token = $self->_rpctoken;
+    if (!$token) {
+        return 0;
+    }
+    my $result = $self->_xmlrpc('Bug.add_comment',
+        {
+            id => $bug_id, comment => $comment, Bugzilla_token => $token,
+        }
+    );
+    return $result ? 1 : 0;
+}
+
+sub _rpctoken {
+    my $self = shift;
+    if (!defined $self->{_rpctoken}) {
+        my $result = $self->_xmlrpc('User.login',
+            {
+                login => $self->options->{username},
+                password => $self->options->{password},
+            }
+        );
+        if ($result) {
+            $self->{_rpctoken} = $result->{token};
+        }
+    }
+    return $self->{_rpctoken};
+}
+
 sub _xmlrpc {
     my ($self, $method, $params) = @_;
-    my $proxy = XMLRPC::Lite->proxy($self->options->{base_url}."xmlrpc.cgi");
-    my $response = eval { $proxy->call($method, $params) };
+
+    my $response = eval { $self->_rpcproxy->call($method, $params) };
     my $err = $@ ? $@ : $response->fault ? $response->faultstring : undef;
     if ($err) {
         local $Data::Dumper::Indent = 0;
@@ -174,5 +228,11 @@ sub _xmlrpc {
         return undef;
     }
     return $response->result;
+}
+
+sub _rpcproxy {
+    my $self = shift;
+    $self->{_rpcproxy} ||= XMLRPC::Lite->proxy($self->options->{base_url}."xmlrpc.cgi");
+    return $self->{_rpcproxy};
 }
 1;

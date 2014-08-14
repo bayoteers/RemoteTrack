@@ -212,6 +212,18 @@ sub bug_start_of_update {
     }
 }
 
+sub bug_end_of_update {
+    my ($self, $args) = @_;
+    my ($bug, $changes) = @$args{qw(bug changes)};
+
+    # Post status change to remote item.
+    # Source object decides if it is really posted or not.
+    if (defined $changes->{bug_status} && $bug->remotetrack_url_obj) {
+        $bug->remotetrack_url_obj->post_status_change(
+            $changes->{bug_status}->[0], $changes->{bug_status}->[1]);
+    }
+}
+
 sub page_before_template {
     my ($self, $params) = @_;
     my ($page) = $params->{page_id} =~/^rt_(.+)$/;

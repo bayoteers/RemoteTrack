@@ -18,7 +18,12 @@ var setSourceOptions = function(cls) {
   [% IF source.defined %]
   var options = [% source.options_json %];
   for (var key in options) {
-    options_template.find("[name=option_"+key+"]").val(options[key]);
+    var input = options_template.find("[name=option_"+key+"]");
+    if (input.attr('type') == 'checkbox') {
+      input.prop('checked', options[key]);
+    } else {
+      input.val(options[key]);
+    }
   }
   [% END %]
 
@@ -120,6 +125,18 @@ $(function() {
     <tr>
       <th>From email:</th>
       <td><input name="option_from_email"></td>
+    </tr>
+    <tr>
+      <th>User name:</th>
+      <td><input name="option_username"></td>
+    </tr>
+    <tr>
+      <th>Password:</th>
+      <td><input name="option_password"></td>
+    </tr>
+    <tr>
+      <th>Post comments:</th>
+      <td><input type="checkbox" name="option_post_comments"></td>
     </tr>
   </table>
 

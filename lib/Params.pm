@@ -23,6 +23,10 @@ sub get_param_list {
             name => 'remotetrack_manual_sync',
             type => 'b',
             default => 0,
+        }, {
+            name => 'remotetrack_status_change_tmpl',
+            type => 'l',
+            default => 'Our tracking [% terms.bug %] changed status: [% from %] -> [% to %]',
         }
     );
 }

@@ -151,4 +151,16 @@ sub remote2local {
     return 0;
 }
 
+sub post_status_change {
+    my ($self, $from, $to) = @_;
+    return unless $self->source->can_post_comment;
+    my $vars = {from => $from, to => $to};
+    my $message;
+    my $message_template = Bugzilla->params->{remotetrack_status_change_tmpl};
+    my $template = Bugzilla->template;
+    $template->process(\$message_template, $vars, \$message)
+        || ThrowTemplateError($template->error());
+    $self->source->post_comment($self->value, $message);
+}
+
 1;
