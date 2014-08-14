@@ -27,11 +27,12 @@ sub valid_urls {
     my @valid_urls;
     my @sources = Bugzilla::Extension::RemoteTrack::Source->get_all();
     for my $url (@$urls) {
-        my $see_also_class = Bugzilla::BugUrl->class_for($url);
-        my ($source) = grep {$_->class eq $see_also_class} @sources;
-        next unless defined $source;
-        next unless $source->is_valid_url($url);
-        push (@valid_urls, $url);
+        for my $source (@sources) {
+            if ($source->is_valid_url($url)) {
+                push (@valid_urls, $url);
+                last;
+            }
+        }
     }
     return \@valid_urls;
 }
