@@ -127,19 +127,17 @@ sub search_operator_field_override {
     my ($self, $args) = @_;
     my $operators = $args->{'operators'};
 
-    $operators->{'remotetrack_url'}->{_default} = \&_rt_url_search_operator;
-}
-
-sub _rt_url_search_operator {
-    my ($self, $args) = @_;
-    my ($chart_id, $joins) = @$args{qw(chart_id joins)};
-    my $table = "map_remotetrack_url_$chart_id";
-    push(@$joins, {
-        table => "remotetrack_url",
-        as => $table,
-        extra => ["$table.active = 1"],
-    });
-    $args->{full_field} = "$table.value";
+    $operators->{'remotetrack_url'}->{_default} = sub {
+        my ($self, $args) = @_;
+        my ($chart_id, $joins) = @$args{qw(chart_id joins)};
+        my $table = "map_remotetrack_url_$chart_id";
+        push(@$joins, {
+            table => "remotetrack_url",
+            as => $table,
+            extra => ["$table.active = 1"],
+        });
+        $args->{full_field} = "$table.value";
+    };
 }
 
 sub object_before_delete {
@@ -180,20 +178,24 @@ sub bug_start_of_update {
 
     # Update remote tracking url if it has been changed
     if ($bug->remotetrack_url ne $old_bug->remotetrack_url) {
-        if (defined $bug->{remotetrack_url_obj}) {
-            $bug->{remotetrack_url_obj}->set_active(0);
-            $bug->{remotetrack_url_obj}->update();
+        if (defined $bug->remotetrack_url_obj) {
+            # Deactivate the old URL object
+            $bug->remotetrack_url_obj->set_active(0);
+            $bug->remotetrack_url_obj->update();
             delete $bug->{remotetrack_url_obj};
         }
         if ($bug->remotetrack_url) {
+            # Get the object for new URL
             my $urlobj = Bugzilla::Extension::RemoteTrack::Url->new({
                 condition => "bug_id = ? AND value = ?",
                 values => [$bug->id, $bug->remotetrack_url]
             });
             if (defined $urlobj) {
+                # Activate if there is an existing one...
                 $urlobj->set_active(1);
                 $urlobj->update();
             } else {
+                # ...or create new one if there isn't
                 my $source = Bugzilla::Extension::RemoteTrack::Source->get_for_url(
                     $bug->remotetrack_url);
                 ThrowUserError("remotetrack_no_source_for_url", {
@@ -246,11 +248,8 @@ BEGIN {
     my $self = shift;
     if (defined $self->{new_remotetrack_url}) {
         return $self->{new_remotetrack_url};
-    } elsif (!exists $self->{remotetrack_url_obj}) {
-        $self->{remotetrack_url_obj} = Bugzilla::Extension::RemoteTrack::Url->new(
-            {condition => "bug_id = ? AND active = 1", values => [$self->id] });
     }
-    return $self->{remotetrack_url_obj} ? $self->{remotetrack_url_obj}->value : '';
+    return $self->remotetrack_url_obj ? $self->remotetrack_url_obj->value : '';
 };
 
 *Bugzilla::Bug::set_remotetrack_url = sub {
@@ -263,7 +262,10 @@ BEGIN {
 
 *Bugzilla::Bug::remotetrack_url_obj = sub {
     my $self = shift;
-    $self->remotetrack_url;
+    if (!exists $self->{remotetrack_url_obj}) {
+        $self->{remotetrack_url_obj} = Bugzilla::Extension::RemoteTrack::Url->new(
+            {condition => "bug_id = ? AND active = 1", values => [$self->id] });
+    }
     return $self->{remotetrack_url_obj};
 };
 
