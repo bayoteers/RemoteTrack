@@ -4,22 +4,38 @@
   'bug/process/results.html.tmpl'
   ] %]
 [% IF bug_templates.contains(template.name) %]
+  <style type="text/css">
+    li.remotetrack-url {
+      font-weight: bold;
+      background-color: lightgray;
+      border-radius: 5px;
+    }
+  </style>
   <script type="text/javascript">
-    var REMOTESYNC_URL = "[% bug.remotetrack_url FILTER js %]";
+    var REMOTETRACK_URL = "[% bug.remotetrack_url FILTER js %]";
+    var REMOTETRACK_MANUALSYNC = [% Param('remotetrack_manual_sync') ? 'true' : 'false' %];
 
     var addRemoteTrackUrlSwitch = function(item, url) {
       var input = $("<input>")
         .attr("type", "radio")
         .attr("name", "remotetrack_url")
         .attr("value", url);
-      if (REMOTESYNC_URL == url) {
+      if (REMOTETRACK_URL == url) {
         input.attr("checked", "checked");
         if (url) {
-          item.css('font-weight', 'bold');
+          item.addClass('remotetrack-url');
         }
       }
       var label = $("<label>").append(input).append(url ? "Track" : "No tracking");
-      item.append("<br>").append(label);
+      item.append(label);
+
+      if (REMOTETRACK_MANUALSYNC && url && url == REMOTETRACK_URL) {
+        item.append(" ").append(
+          $('<a>')
+            .attr('href', "page.cgi?id=rt_manual_sync.html&amp;bug_id=[% bug.id %]")
+            .text('Manual sync')
+        );
+      }
     }
 
     $(function() {
@@ -45,10 +61,6 @@
           addRemoteTrackUrlSwitch(noTrackLi, "");
         }
       })
-
-      [% IF Param('remotetrack_manual_sync') && bug.remotetrack_url %]
-      $("ul.bug_urls").append($('<li><a href="page.cgi?id=rt_manual_sync.html&amp;bug_id=[% bug.id %]">Manual sync</a></li>'))
-      [% END %]
     })
   </script>
 [% END %]
