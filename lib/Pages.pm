@@ -10,7 +10,7 @@ use warnings;
 use strict;
 
 use Bugzilla;
-
+use Bugzilla::Error;
 use Bugzilla::Util qw(correct_urlbase);
 
 use Bugzilla::Extension::RemoteTrack::Source;
@@ -63,14 +63,22 @@ sub source_html {
 
 sub manual_sync_html {
     my $vars = shift;
-    my $input = Bugzilla->input_params;
-    my $bug_id = $input->{bug_id};
-    my $bug = Bugzilla::Bug->new($bug_id);
-    $vars->{bug} = $bug;
+
     if(!Bugzilla->params->{remotetrack_manual_sync}) {
         $vars->{error} = "manual sync not allowed";
         return;
     }
+    my $group = Bugzilla->params->{remotetrack_group};
+    ThrowUserError('auth_failure', {
+            group => $group,
+            action => 'use',
+            object => 'remotetrack_manual_sync'
+        }) unless Bugzilla->user->in_group($group);
+
+    my $input = Bugzilla->input_params;
+    my $bug_id = $input->{bug_id};
+    my $bug = Bugzilla::Bug->new($bug_id);
+    $vars->{bug} = $bug;
     if ($bug->remotetrack_url_obj) {
         my $old_user = Bugzilla->user;
         Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotetrack_user}));

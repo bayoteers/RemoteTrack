@@ -9,6 +9,8 @@ package Bugzilla::Extension::RemoteTrack::Params;
 use warnings;
 use strict;
 
+use Bugzilla::Config::Common qw(check_group);
+
 sub get_param_list {
     return (
         {
@@ -24,7 +26,13 @@ sub get_param_list {
             name => 'remotetrack_status_change_tmpl',
             type => 'l',
             default => 'Our tracking [% terms.bug %] changed status: [% from %] -> [% to %]',
-        }
+        },{
+            name    => 'remotetrack_group',
+            type    => 's',
+            choices => \&Bugzilla::Config::GroupSecurity::_get_all_group_names,
+            default => 'admin',
+            checker => \&check_group
+        },
     );
 }
 

@@ -17,12 +17,14 @@
       font-weight: bold;
       background-color: lightgray;
       border-radius: 5px;
+      padding: 5px 0px;
     }
   </style>
   <script type="text/javascript">
     var REMOTETRACK_URL = "[% bug.remotetrack_url FILTER js %]";
-    var REMOTETRACK_MANUALSYNC = [% Param('remotetrack_manual_sync') ? 'true' : 'false' %];
 
+  [% IF user.in_group(Param('remotetrack_group')) %]
+    var REMOTETRACK_MANUALSYNC = [% Param('remotetrack_manual_sync') ? 'true' : 'false' %];
     var addRemoteTrackUrlSwitch = function(item, url) {
       var input = $("<input>")
         .attr("type", "radio")
@@ -70,6 +72,21 @@
         }
       })
     })
+
+  [% ELSE %]
+
+  $(function() {
+    if (!REMOTETRACK_URL) return;
+    $("ul.bug_urls > li").each(function() {
+      var item = $(this);
+      if (item.find('a').first().attr('href') == REMOTETRACK_URL) {
+        item.addClass('remotetrack-url').append(" Tracked");
+        return false;
+      }
+    });
+  })
+
+  [% END %]
   </script>
 [% END %]
 

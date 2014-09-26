@@ -230,6 +230,7 @@ sub page_before_template {
     $page =~ s/\./_/;
     my $handler = Bugzilla::Extension::RemoteTrack::Pages->can($page);
     if (defined $handler) {
+        Bugzilla->login(LOGIN_REQUIRED);
         $handler->($params->{vars});
     }
 }
@@ -253,6 +254,8 @@ BEGIN {
     my ($self, $url) = @_;
     $url ||= '';
     if ($url ne $self->remotetrack_url) {
+        ThrowUserError("remotetrack_url_change_denied")
+            unless Bugzilla->user->in_group(Bugzilla->params->{remotetrack_group});
         $self->{new_remotetrack_url} = $url;
     }
 };
