@@ -217,11 +217,15 @@ sub _do_list_select {
     return $objects
 }
 
-
 sub is_valid_url {
     my ($self, $url) = @_;
     my $uri = new URI($url);
     return $self->class->should_handle($uri) ? 1 : 0;
+}
+
+sub post_changes {
+    my ($self, $url, $changes) = @_;
+    return 0;
 }
 
 1;

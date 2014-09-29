@@ -25,8 +25,14 @@ sub get_param_list {
         }, {
             name => 'remotetrack_status_change_tmpl',
             type => 'l',
-            default => 'Our tracking [% terms.bug %] changed status: [% from %] -> [% to %]',
-        },{
+            default => 'Our tracking [% terms.bug %] changed status: [% status.0 %] -> [% status.1 %]',
+            checker => \&_check_template
+        }, {
+            name => 'remotetrack_tracking_change_tmpl',
+            type => 'l',
+            default => "[% tracking ? 'Started' : 'Stopped' %] tracking this." ,
+            checker => \&_check_template
+        }, {
             name    => 'remotetrack_group',
             type    => 's',
             choices => \&Bugzilla::Config::GroupSecurity::_get_all_group_names,
@@ -41,6 +47,18 @@ sub _check_user {
     if ($value) {
         eval {Bugzilla::User->check($value);};
         return $@ || "";
+    }
+    return "";
+}
+
+sub _check_template {
+    my $value = shift;
+    if ($value) {
+        my $template = Bugzilla->template;
+        my $result;
+        unless ($template->process(\$value, {}, \$result)) {
+            return $template->error;
+        }
     }
     return "";
 }

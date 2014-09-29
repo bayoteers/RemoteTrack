@@ -211,15 +211,30 @@ sub bug_start_of_update {
     }
 }
 
-sub bug_end_of_update {
+sub bugmail_recipients {
     my ($self, $args) = @_;
-    my ($bug, $changes) = @$args{qw(bug changes)};
+    my ($bug, $diffs) = @$args{qw(bug diffs)};
+    # Posting the changes to remote items needs to be done here, because in bug
+    # update hooks the transaction might still get rolled back if errors occur
+    my %changes = map {
+            $_->{field_name} => [$_->{old}, $_->{new}]
+        } grep {
+            $_->{field_name} eq 'remotetrack_url' ||
+            $_->{field_name} eq 'bug_status'
+        } @$diffs;
+    return unless (%changes);
 
-    # Post status change to remote item.
-    # Source object decides if it is really posted or not.
-    if (defined $changes->{bug_status} && $bug->remotetrack_url_obj) {
-        $bug->remotetrack_url_obj->post_status_change(
-            $changes->{bug_status}->[0], $changes->{bug_status}->[1]);
+    if (defined $changes{remotetrack_url} && $changes{remotetrack_url}->[0]) {
+        # Stop tracking notice to old tracking URL
+        my $urlobj = Bugzilla::Extension::RemoteTrack::Url->new({
+                condition => "bug_id = ? AND value = ?",
+                values => [$bug->id, $changes{remotetrack_url}->[0]]
+            });
+        $urlobj->post_changes(\%changes) if defined $urlobj;
+    }
+
+    if ($bug->remotetrack_url) {
+        $bug->remotetrack_url_obj->post_changes(\%changes);
     }
 }
 

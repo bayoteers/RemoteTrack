@@ -49,7 +49,7 @@ sub check_options {
                     err => "'$value' is not a valid email address"
                 });
             }
-        } elsif ($key eq 'post_comments') {
+        } elsif ($key eq 'post_comments' || $key eq 'post_changes') {
             $value = $value ? 1 : 0
         } elsif ($key ne 'username' && $key ne 'password') {
             $value = undef;
@@ -172,17 +172,14 @@ sub _comment_url {
         '';
 }
 
-sub can_post_comment {
+sub _can_post_comment {
     my $self = shift;
-    return ($self->options->{post_comments}
-            && $self->options->{username}
-            && $self->options->{password}
-        ) ? 1 : 0;
+    return ($self->options->{username} && $self->options->{password}) ? 1 : 0;
 }
 
-sub post_comment {
+sub _post_comment {
     my ($self, $url, $comment) = @_;
-    return 0 unless $self->can_post_comment;
+    return 0 unless $self->_can_post_comment;
     my $bug_id = $self->_bug_id_from_url($url);
     my $token = $self->_rpctoken;
     if (!$token) {
@@ -194,6 +191,30 @@ sub post_comment {
         }
     );
     return $result ? 1 : 0;
+}
+
+sub post_changes {
+    my ($self, $url, $changes) = @_;
+    return 0 unless ($self->_can_post_comment && $self->options->{post_changes});
+
+    my %vars;
+    my @templates;
+    if (defined $changes->{remotetrack_url}) {
+        push(@templates, Bugzilla->params->{remotetrack_tracking_change_tmpl});
+        $vars{tracking} = $changes->{remotetrack_url}->[0] eq $url ? 0 : 1;
+    }
+    if (defined $changes->{bug_status}) {
+        push(@templates, Bugzilla->params->{remotetrack_status_change_tmpl});
+        $vars{status} = $changes->{bug_status};
+    }
+    return 0 unless (@templates);
+
+    my $message;
+    my $message_template = join("\n", @templates);
+    my $template = Bugzilla->template;
+    $template->process(\$message_template, \%vars, \$message)
+        || ThrowTemplateError($template->error());
+    return $self->_post_comment($url, $message);
 }
 
 sub _rpctoken {
