@@ -69,7 +69,7 @@ sub check_options {
 }
 
 sub handle_mail_notification {
-    my ($self, $email) = shift;
+    my ($self, $email) = @_;
     my $bz_url = $email->header('X-Bugzilla-URL') || '';
     my $from = $email->header('From') || '';
     my $action = $email->header('X-Bugzilla-Type') || '';
@@ -80,10 +80,10 @@ sub handle_mail_notification {
     my $msgid = $email->header('Message-ID');
     my ($id) = $msgid =~ /^<bug-(\d*)-/;
     if ($id) {
-        my $urls = Bugzilla::Extension::RemoteTrack::Url->match(
+        my $urls = Bugzilla::Extension::RemoteTrack::Url->match({
             source_id => $self->id,
-            value => $self->options->{base_url}."/show_bug.cgi?id=$id",
-        );
+            value => $self->options->{base_url}."show_bug.cgi?id=$id",
+        });
         for my $url (@$urls) {
             $url->remote2local;
         }
