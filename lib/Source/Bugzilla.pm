@@ -250,7 +250,15 @@ sub _xmlrpc {
 
 sub _rpcproxy {
     my $self = shift;
-    $self->{_rpcproxy} ||= XMLRPC::Lite->proxy($self->options->{base_url}."xmlrpc.cgi");
+    if (!defined $self->{_rpcproxy}) {
+        $self->{_rpcproxy} ||= XMLRPC::Lite->proxy($self->options->{base_url}."xmlrpc.cgi");
+        my $proxy_url = Bugzilla->params->{'proxy_url'};
+        if ($proxy_url) {
+            $self->{_rpcproxy}->transport->proxy(['http', 'https'], $proxy_url);
+        } else {
+            $self->{_rpcproxy}->transport->env_proxy;
+        }
+    }
     return $self->{_rpcproxy};
 }
 1;
