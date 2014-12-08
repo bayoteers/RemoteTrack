@@ -251,10 +251,10 @@ sub _xmlrpc {
 sub _rpcproxy {
     my $self = shift;
     if (!defined $self->{_rpcproxy}) {
-        $self->{_rpcproxy} ||= XMLRPC::Lite->proxy($self->options->{base_url}."xmlrpc.cgi");
+        $self->{_rpcproxy} = XMLRPC::Lite->proxy($self->options->{base_url}."xmlrpc.cgi");
         my $proxy_url = Bugzilla->params->{'proxy_url'};
         if ($proxy_url) {
-            $self->{_rpcproxy}->transport->proxy('http' => $proxy_url);
+            $self->{_rpcproxy}->transport->proxy->proxy('http' => $proxy_url);
             if (!$ENV{HTTPS_PROXY}) {
                 # LWP does not handle https over proxy, so by setting the env
                 # variables the proxy connection is handled by underlying library
