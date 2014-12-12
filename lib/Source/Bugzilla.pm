@@ -26,6 +26,7 @@ use Bugzilla::Error;
 use Bugzilla::Util qw(datetime_from);
 
 use Data::Dumper;
+use Email::Address;
 use XMLRPC::Lite;
 
 sub check_options {
@@ -71,7 +72,7 @@ sub check_options {
 sub handle_mail_notification {
     my ($self, $email) = @_;
     my $bz_url = $email->header('X-Bugzilla-URL') || '';
-    my $from = $email->header('From') || '';
+    my ($from) = Email::Address->parse($email->header('From'));
     my $action = $email->header('X-Bugzilla-Type') || '';
     return 0 if ($self->options->{base_url} ne $bz_url
                  || $self->options->{from_email} ne $from
