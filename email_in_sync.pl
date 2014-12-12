@@ -113,14 +113,17 @@ sub mail_admin {
 $SIG{__DIE__} = \&die_handler;
 
 Bugzilla->usage_mode(USAGE_MODE_EMAIL);
-Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotetrack_user}));
 
 # Check that RemoteTrack is enabled
-unless (grep($_->isa('Bugzilla::Extension::RemoteTrack'), @{Bugzilla->extensions}))
-{
-    die "RemoteTrack extension is not enabled in Bugzilla";
-}
+die "RemoteTrack extension is not enabled in Bugzilla"
+    unless (grep($_->isa('Bugzilla::Extension::RemoteTrack'), @{Bugzilla->extensions}));
+
 require Bugzilla::Extension::RemoteTrack::Source;
+
+# Check that the user is set
+die "RemoteTrack user not defined"
+    unless (Bugzilla->params->{remotetrack_user});
+Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotetrack_user}));
 
 # Check that there is something to read from stdin
 my $stdin_select = IO::Select->new(\*STDIN);
