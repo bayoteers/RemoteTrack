@@ -71,11 +71,12 @@ sub check_options {
 
 sub handle_mail_notification {
     my ($self, $email) = @_;
-    my $bz_url = $email->header('X-Bugzilla-URL') || '';
     my ($from) = Email::Address->parse($email->header('From'));
+    return 0 unless defined $from;
+    my $bz_url = $email->header('X-Bugzilla-URL') || '';
     my $action = $email->header('X-Bugzilla-Type') || '';
     return 0 if ($self->options->{base_url} ne $bz_url
-                 || $self->options->{from_email} ne $from
+                 || $self->options->{from_email} ne $from->address
                  || $action ne 'changed');
 
     my $msgid = $email->header('Message-ID');
