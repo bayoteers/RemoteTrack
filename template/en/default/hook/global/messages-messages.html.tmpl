@@ -1,0 +1,17 @@
+[%# This Source Code Form is subject to the terms of the Mozilla Public
+  # License, v. 2.0. If a copy of the MPL was not distributed with this
+  # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+  #
+  # Copyright (C) 2015 Jolla Ltd.
+  # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
+  #%]
+
+[% IF message_tag == 'rt_cant_delete_has_active_urls' %]
+You can't delete that source as it still has active tracking bugs.
+[% ELSIF message_tag == 'rt_source_updated' %]
+Source updated successfully
+[% ELSIF message_tag == 'rt_source_created' %]
+Source created successfully
+[% ELSIF message_tag == 'rt_source_deleted' %]
+Source deleted successfully
+[% END %]

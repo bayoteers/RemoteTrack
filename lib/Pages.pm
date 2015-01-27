@@ -14,6 +14,7 @@ use Bugzilla::Error;
 use Bugzilla::Util qw(correct_urlbase);
 
 use Bugzilla::Extension::RemoteTrack::Source;
+use Bugzilla::Extension::RemoteTrack::Url;
 
 sub source_html {
     my $vars = shift;
@@ -45,16 +46,26 @@ sub source_html {
         if ($source) {
             $source->set_all($params);
             $source->update();
+            $vars->{message} = "rt_source_updated";
         } else {
             $params->{class} = delete $input->{class};
             $source = Bugzilla::Extension::RemoteTrack::Source->create($params);
+            $vars->{message} = "rt_source_created";
         }
     } elsif ($action eq 'delete' && defined $source) {
-        $source->remove_from_db();
-        $source = undef;
-    } else {
-        $vars->{source} = $source;
+        my $urls = Bugzilla::Extension::RemoteTrack::Url->match({
+                active => 1,
+                source_id => $source->id,
+            });
+        if (!@$urls) {
+            $source->remove_from_db();
+            $source = undef;
+            $vars->{message} = "rt_source_deleted";
+        } else {
+            $vars->{message} = "rt_cant_delete_has_active_urls";
+        }
     }
+    $vars->{source} = $source;
     $vars->{action} = $action;
     $vars->{source_classes} = Bugzilla::Extension::RemoteTrack::Source->CLASSES;
     $vars->{sources} = [Bugzilla::Extension::RemoteTrack::Source->get_all()];
