@@ -30,10 +30,12 @@ var setSourceOptions = function(cls) {
 
 $(function() {
   var cls = $('[name=class]');
-  setSourceOptions(cls.val());
-  cls.change(function() {
+  if (cls.size()) {
     setSourceOptions(cls.val());
-  });
+    cls.change(function() {
+      setSourceOptions(cls.val());
+    });
+  }
 })
 [% END %]
 
