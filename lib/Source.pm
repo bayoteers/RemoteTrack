@@ -64,7 +64,7 @@ sub CLASSES {
             'Bugzilla::BugUrl::Bugzilla' =>
                 'Bugzilla::Extension::RemoteTrack::Source::Bugzilla',
         );
-        Bugzilla::Hook->process('remotetrack_source_classes', {classes => \%classes});
+        Bugzilla::Hook::process('remotetrack_source_classes', {classes => \%classes});
         $cache->{remotetrack_classes} = \%classes;
     }
     return $cache->{remotetrack_classes};
