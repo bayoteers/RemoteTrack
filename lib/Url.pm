@@ -150,7 +150,13 @@ sub remote2local {
 
 sub post_changes {
     my ($self, $changes) = @_;
-    $self->source->post_changes($self->value, $changes);
+    if (Bugzilla->params->{'remotetrack_use_queue'}) {
+        Bugzilla->job_queue->insert('remotetrack_post_changes', {
+            url => $self->value, bug_id => $self->bug_id, changes => $changes,
+        });
+        return;
+    }
+    $self->source->post_changes($self->value, $self->bug, $changes);
 }
 
 1;

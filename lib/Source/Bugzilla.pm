@@ -196,7 +196,7 @@ sub _post_comment {
 }
 
 sub post_changes {
-    my ($self, $url, $changes) = @_;
+    my ($self, $url, $bug, $changes) = @_;
     return 0 unless ($self->_can_post_comment && $self->options->{post_changes});
 
     my %vars;

@@ -224,7 +224,7 @@ sub is_valid_url {
 }
 
 sub post_changes {
-    my ($self, $url, $changes) = @_;
+    my ($self, $url, $bug, $changes) = @_;
     return 0;
 }
 

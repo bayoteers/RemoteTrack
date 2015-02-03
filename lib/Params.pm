@@ -38,6 +38,10 @@ sub get_param_list {
             choices => \&Bugzilla::Config::GroupSecurity::_get_all_group_names,
             default => 'admin',
             checker => \&check_group
+        }, {
+            name => 'remotetrack_use_queue',
+            type => 'b',
+            default => 0,
         },
     );
 }

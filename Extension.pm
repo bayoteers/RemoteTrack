@@ -238,6 +238,12 @@ sub bugmail_recipients {
     }
 }
 
+sub job_map {
+    my ($self, $params) = @_;
+    $params->{job_map}->{remotetrack_post_changes} =
+            'Bugzilla::Extension::RemoteTrack::Job::PostChanges';
+}
+
 sub page_before_template {
     my ($self, $params) = @_;
     my ($page) = $params->{page_id} =~/^rt_(.+)$/;
