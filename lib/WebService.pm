@@ -15,6 +15,10 @@ use Bugzilla::Extension::RemoteTrack::Source;
 
 use base qw(Bugzilla::WebService);
 
+use constant PUBLIC_METHODS => qw(
+    valid_urls
+);
+
 sub valid_urls {
     my ($self, $params) = @_;
 
