@@ -218,9 +218,6 @@ sub bugmail_recipients {
     # update hooks the transaction might still get rolled back if errors occur
     my %changes = map {
             $_->{field_name} => [$_->{old}, $_->{new}]
-        } grep {
-            $_->{field_name} eq 'remotetrack_url' ||
-            $_->{field_name} eq 'bug_status'
         } @$diffs;
     return unless (%changes);
 
