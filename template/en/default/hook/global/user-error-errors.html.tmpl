@@ -8,4 +8,8 @@
 
 [% IF error == "remotetrack_url_change_denied" %]
   You are not allowed to change the remote tracking URL.
+[% ELSIF error == "remotetrack_duplicate_not_allowed" %]
+  This is a tracking [% terms.bug %] and cannot be marked at duplicate.
+  If you really want to mark it as duplicate, you need to change the tracking
+  status first.
 [% END %]

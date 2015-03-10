@@ -168,6 +168,16 @@ sub object_end_of_set_all {
     $bug->set_remotetrack_url($url);
 }
 
+sub bug_check_can_change_field {
+    my ($self, $args) = @_;
+    my ($bug, $field, $new_value) = @$args{qw(bug field new_value)};
+    if ($bug->remotetrack_url && $field eq 'resolution' &&
+        $new_value eq 'DUPLICATE')
+    {
+        ThrowUserError('remotetrack_duplicate_not_allowed');
+    }
+}
+
 sub bug_start_of_update {
     my ($self, $args) = @_;
     my ($bug, $old_bug, $changes, $timestamp)
