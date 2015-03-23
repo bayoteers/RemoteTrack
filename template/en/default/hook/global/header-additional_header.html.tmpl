@@ -81,6 +81,11 @@
       var item = $(this);
       if (item.find('a').first().attr('href') == REMOTETRACK_URL) {
         item.addClass('remotetrack-url').append(" Tracked");
+        item.append(
+          $('<input>').attr('name', 'remotetrack_url')
+                    .attr('type', 'hidden')
+                    .attr('value', REMOTETRACK_URL)
+        );
         return false;
       }
     });
