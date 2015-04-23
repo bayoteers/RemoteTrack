@@ -162,9 +162,8 @@ sub object_end_of_set_all {
     # If we are editing bug via browser, we need to manually set remotetrack_url,
     # because it is not included in set_all in process_bug.cgi
     my $cgi = Bugzilla->cgi;
-    my $dontchange = $cgi->param('dontchange') || '';
     my $url = $cgi->param('remotetrack_url');
-    return if ($dontchange && $url eq $dontchange);
+    return if (!defined $url);
     $bug->set_remotetrack_url($url);
 }
 
