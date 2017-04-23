@@ -22,12 +22,7 @@ our $VERSION = '0.01';
 sub install_before_final_checks {
     my ($self, $args) = @_;
     print "Checking RemoteTrack Source types...\n" unless $args->{silent};
-    for my $class (values %{Bugzilla::Extension::RemoteTrack::Source->CLASSES}) {
-        eval "require $class"
-            or die("RemoteTrack Source class $class not found");
-        $class->isa("Bugzilla::Extension::RemoteTrack::Source")
-            or die("type $class does not inherit Bugzilla::Extension::RemoteTrack::Source");
-    }
+    Bugzilla::Extension::RemoteTrack::Source::check_sources();
 }
 
 sub config_add_panels {

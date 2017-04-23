@@ -70,6 +70,28 @@ sub CLASSES {
     return $cache->{remotetrack_classes};
 }
 
+use constant REQUIRED_METHODS => qw(
+    check_options
+);
+
+sub check_sources {
+    while ( my ($url_class, $source_class) = each %{CLASSES()} ) {
+        eval "require $url_class"
+            or die("BugUrl class $url_class not found");
+        $url_class->isa("Bugzilla::BugUrl")
+            or die("$url_class is not a Bugzilla::BugUrl sub class");
+
+        eval "require $source_class"
+            or die("RemoteTrack Source class $source_class not found");
+        $source_class->isa("Bugzilla::Extension::RemoteTrack::Source")
+            or die("type $source_class does not inherit Bugzilla::Extension::RemoteTrack::Source");
+        for my $method (REQUIRED_METHODS) {
+            $source_class->can($method)
+                or die("$source_class does not implement $method");
+        }
+    }
+}
+
 sub get_source_class {
     my $class = shift;
     $class = CLASSES->{$class};
@@ -165,12 +187,6 @@ sub _check_options {
     }
     $opts = $class->check_options($opts);
     return encode_json($opts);
-}
-
-sub check_options {
-    my $class = shift;
-    $class = blessed($class) ? ref($class) : $class;
-    die "$class does not implement check_options()";
 }
 
 ###########
