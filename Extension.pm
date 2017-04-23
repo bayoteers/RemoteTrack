@@ -10,7 +10,6 @@ use warnings;
 use strict;
 use base qw(Bugzilla::Extension);
 
-use Bugzilla::Extension::RemoteTrack::Util;
 use Bugzilla::Extension::RemoteTrack::Pages;
 use Bugzilla::Extension::RemoteTrack::Source;
 use Bugzilla::Extension::RemoteTrack::Url;
@@ -27,7 +26,7 @@ sub install_before_final_checks {
         eval "require $class"
             or die("RemoteTrack Source class $class not found");
         $class->isa("Bugzilla::Extension::RemoteTrack::Source")
-            or die("type $class does not inherit Bugzilla::Extension::RemoteTrack::Source")
+            or die("type $class does not inherit Bugzilla::Extension::RemoteTrack::Source");
     }
 }
 

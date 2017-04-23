@@ -245,7 +245,7 @@ sub _xmlrpc {
         local $Data::Dumper::Purity = 1;
         warn "Remote Bugzilla XMLRPC call $method(".Dumper($params).") failed: ". $err;
         # TODO better error handling
-        return undef;
+        return;
     }
     return $response->result;
 }

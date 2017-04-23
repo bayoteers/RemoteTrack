@@ -202,7 +202,7 @@ sub get_for_url {
     for my $source ($class->get_all) {
         return $source if ($source->is_valid_url($url));
     }
-    return undef;
+    return;
 }
 
 sub _do_list_select {

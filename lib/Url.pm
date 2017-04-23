@@ -108,14 +108,22 @@ sub last_sync_now {
 
 sub new_comments {
     my $self = shift;
-    return undef unless $self->source->can('fetch_comments');
-    return $self->source->fetch_comments($self->value, $self->last_sync);
+    if ($self->source->can('fetch_comments')) {
+        return $self->source->fetch_comments(
+            $self->value, $self->last_sync
+        );
+    }
+    return;
 }
 
 sub new_status_changes {
     my $self = shift;
-    return undef unless $self->source->can('fetch_status_changes');
-    return $self->source->fetch_status_changes($self->value, $self->last_sync);
+    if ($self->source->can('fetch_status_changes')) {
+        return $self->source->fetch_status_changes(
+            $self->value, $self->last_sync
+        );
+    }
+    return;
 }
 
 sub remote2local {
@@ -130,8 +138,9 @@ sub remote2local {
         };
         my $message;
         my $template = Bugzilla->template;
-        $template->process('remotetrack/local_comment.txt.tmpl', $vars, \$message)
-            || ThrowTemplateError($template->error());
+        $template->process(
+            'remotetrack/local_comment.txt.tmpl', $vars, \$message
+        ) || ThrowTemplateError($template->error());
 
         Bugzilla->dbh->bz_start_transaction;
         $self->bug->add_comment($message);
@@ -140,7 +149,9 @@ sub remote2local {
         $self->update();
         Bugzilla->dbh->bz_commit_transaction;
 
-        Bugzilla::BugMail::Send($self->bug->bug_id, { changer => Bugzilla->user });
+        Bugzilla::BugMail::Send(
+            $self->bug->bug_id, { changer => Bugzilla->user }
+        );
         return 1;
     }
     $self->last_sync_now();
