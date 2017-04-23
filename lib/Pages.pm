@@ -94,7 +94,7 @@ sub manual_sync_html {
         my $old_user = Bugzilla->user;
         Bugzilla->set_user(Bugzilla::User->check(Bugzilla->params->{remotetrack_user}));
         eval {
-            $bug->remotetrack_url_obj->remote2local();
+            $bug->remotetrack_url_obj->sync_from_remote();
         };
         Bugzilla->set_user($old_user);
         if ($@) {

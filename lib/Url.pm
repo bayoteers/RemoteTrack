@@ -126,7 +126,7 @@ sub new_status_changes {
     return;
 }
 
-sub remote2local {
+sub sync_from_remote {
     my $self = shift;
     my @comments = @{$self->new_comments || []};
     my @status_changes = @{$self->new_status_changes || []};

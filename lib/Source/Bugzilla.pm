@@ -87,7 +87,7 @@ sub handle_mail_notification {
             value => $self->options->{base_url}."show_bug.cgi?id=$id",
         });
         for my $url (@$urls) {
-            $url->remote2local;
+            $url->sync_from_remote();
         }
     } else {
         ThrowCodeError('remotetrack_email_error', {
