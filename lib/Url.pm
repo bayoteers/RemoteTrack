@@ -108,32 +108,26 @@ sub last_sync_now {
 
 sub new_comments {
     my $self = shift;
-    if ($self->source->can('fetch_comments')) {
-        return $self->source->fetch_comments(
-            $self->value, $self->last_sync
-        );
-    }
-    return;
+    return $self->source->fetch_comments(
+        $self->value, $self->last_sync
+    );
 }
 
-sub new_status_changes {
+sub new_changes {
     my $self = shift;
-    if ($self->source->can('fetch_status_changes')) {
-        return $self->source->fetch_status_changes(
-            $self->value, $self->last_sync
-        );
-    }
-    return;
+    return $self->source->fetch_changes(
+        $self->value, $self->last_sync
+    );
 }
 
 sub sync_from_remote {
     my $self = shift;
     my @comments = @{$self->new_comments || []};
-    my @status_changes = @{$self->new_status_changes || []};
-    if (@comments || @status_changes) {
+    my @changes = @{$self->new_changes || []};
+    if (@comments || @changes) {
         my $vars = {
             comments => \@comments,
-            states => \@status_changes,
+            changes => \@changes,
             url=> $self->value
         };
         my $message;

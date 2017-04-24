@@ -6,8 +6,8 @@ Comment by [% comment.who %]
 
 [%+ comment.text FILTER none %]
 [%+ END %]
-[% FOREACH state IN states %]
+[% FOREACH c IN changes %]
 ---
-* [% state.who %] changed status at [% state.when FILTER time %]
-  [%+ state.from %] -> [% state.to %]
+* [% c.who %] changed [% c.field %] at [% c.when FILTER time %]
+  [%+ c.from %] -> [% c.to %]
 [% END %]

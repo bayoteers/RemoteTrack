@@ -140,7 +140,7 @@ sub fetch_comments {
     return \@comments;
 }
 
-sub fetch_status_changes {
+sub fetch_changes {
     my ($self, $url, $since) = @_;
     my $bug_id = $self->_bug_id_from_url($url);
     $since = $since ? datetime_from($since) : undef;
@@ -150,19 +150,17 @@ sub fetch_status_changes {
     return \@changes unless defined $result;
     for my $c (@{$result->{bugs}->[0]->{history}}) {
         next if ($since && $since > datetime_from($c->{when}.'Z'));
-        my ($status) = grep {$_->{field_name} eq 'status'} @{$c->{changes}};
-        next unless ($status);
-        my ($resolution)= grep {$_->{field_name} eq 'resolution'} @{$c->{changes}};
-        my $from = $status->{removed};
-        $from .= " / ".$resolution->{removed} if ($resolution && $resolution->{removed});
-        my $to = $status->{added};
-        $to .= " / ".$resolution->{added} if ($resolution && $resolution->{added});
-        push(@changes,
-            {
-                who => $c->{who}, when => $c->{when}."Z",
-                from => $from, to => $to
-            }
-        );
+        for my $f (@{$c->{changes}}) {
+            push(@changes,
+                {
+                    who => $c->{who},
+                    when => $c->{when}."Z",
+                    field => $f->{field_name},
+                    from => $f->{removed},
+                    to => $f->{added},
+                }
+            );
+        }
     }
     return \@changes;
 }

@@ -72,6 +72,8 @@ sub CLASSES {
 
 use constant REQUIRED_METHODS => qw(
     check_options
+    fetch_comments
+    fetch_changes
 );
 
 sub check_sources {
