@@ -17,10 +17,14 @@ use Bugzilla::Extension::RemoteTrack::Url;
 use Bugzilla::Constants;
 use Bugzilla::Error;
 
+use List::Util qw(any);
+
 our $VERSION = '0.01';
 
 sub install_before_final_checks {
     my ($self, $args) = @_;
+    any { $_->isa('Bugzilla::Extension::BayotBase') } @{Bugzilla->extensions}
+        or die("RemoteTrack extension requires BayotBase extension");
     print "Checking RemoteTrack Source types...\n" unless $args->{silent};
     Bugzilla::Extension::RemoteTrack::Source::check_sources();
 }
