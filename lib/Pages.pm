@@ -10,6 +10,7 @@ use warnings;
 use strict;
 
 use Bugzilla;
+use Bugzilla::Bug;
 use Bugzilla::Error;
 use Bugzilla::Util qw(correct_urlbase);
 
