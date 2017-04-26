@@ -28,7 +28,7 @@ use Bugzilla::Util qw(datetime_from);
 use Data::Dumper;
 use Email::Address;
 use XMLRPC::Lite;
-use List::Util qw(none);
+use List::Util qw(any none);
 
 sub check_options {
     my ($invocant, $options) = @_;
@@ -51,7 +51,7 @@ sub check_options {
                     err => "'$value' is not a valid email address"
                 });
             }
-        } elsif ($key eq 'post_comments' || $key eq 'post_changes') {
+        } elsif (any {$key eq $_} qw(post_comments post_changes http_auth)) {
             $value = $value ? 1 : 0
         } elsif (none {$key eq $_} qw(username password excluded_fields) ) {
             $value = undef;
@@ -213,7 +213,7 @@ sub _excluded_fields {
             cc_detail
             creator_detail
         ),
-        split(/[,\s]+/, $self->options->{excluded_fields} or ''),
+        split(/[,\s]+/, $self->options->{excluded_fields} || ''),
     );
 }
 
@@ -303,7 +303,15 @@ sub _xmlrpc {
 sub _rpcproxy {
     my $self = shift;
     if (!defined $self->{_rpcproxy}) {
-        $self->{_rpcproxy} = XMLRPC::Lite->proxy($self->options->{base_url}."xmlrpc.cgi");
+        my $uri = URI->new($self->options->{base_url});
+        my @path = $uri->path_segments();
+        push(@path, 'xmlrpc.cgi');
+        $uri->path_segments(@path);
+        if ($self->options->{http_auth}) {
+            my $userinfo = $self->options->{username} . ':' . $self->options->{password};
+            $uri->userinfo($userinfo);
+        }
+        $self->{_rpcproxy} = XMLRPC::Lite->proxy($uri->as_string);
         my $proxy_url = Bugzilla->params->{'proxy_url'};
         if ($proxy_url) {
             $self->{_rpcproxy}->transport->proxy->proxy('http' => $proxy_url);
