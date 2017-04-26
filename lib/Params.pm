@@ -42,6 +42,18 @@ sub get_param_list {
             name => 'remotetrack_use_queue',
             type => 'b',
             default => 0,
+        }, {
+            name => 'remotetrack_default_product',
+            type => 't',
+            default => '',
+        }, {
+            name => 'remotetrack_default_component',
+            type => 't',
+            default => '',
+        }, {
+            name => 'remotetrack_default_version',
+            type => 't',
+            default => '',
         },
     );
 }

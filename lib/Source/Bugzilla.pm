@@ -165,6 +165,28 @@ sub fetch_changes {
     return \@changes;
 }
 
+sub fetch_full {
+    my ($self, $url) = @_;
+    my $bug_id = $self->_bug_id_from_url($url);
+    my $params = {ids => [$bug_id]};
+    my $result = $self->_xmlrpc('Bug.get', $params);
+    my $raw_data = $result->{bugs}->[0];
+
+    my $comments = $self->fetch_comments($url);
+    my $description = shift @$comments;
+
+    my $changes = $self->fetch_changes($url);
+
+    return {
+        url => $url,
+        raw_data => $raw_data,
+        summary => $raw_data->{summary},
+        description => $description->{text},
+        comments => $comments,
+        changes => $changes,
+    };
+}
+
 sub _comment_url {
     my ($self, $bug_id, $cnum) = @_;
     return defined $cnum ?

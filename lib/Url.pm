@@ -125,27 +125,21 @@ sub sync_from_remote {
     my @comments = @{$self->new_comments || []};
     my @changes = @{$self->new_changes || []};
     if (@comments || @changes) {
-        my $vars = {
+        my $data = {
             comments => \@comments,
             changes => \@changes,
             url=> $self->value
         };
-        my $message;
-        my $template = Bugzilla->template;
-        $template->process(
-            'remotetrack/local_comment.txt.tmpl', $vars, \$message
-        ) || ThrowTemplateError($template->error());
+        my $comment = $self->source->comment_from_data($data);
 
         Bugzilla->dbh->bz_start_transaction;
-        $self->bug->add_comment($message);
-        $self->bug->update();
+        $self->bug->add_comment($comment);
+        my $changes = $self->bug->update();
         $self->last_sync_now();
         $self->update();
         Bugzilla->dbh->bz_commit_transaction;
 
-        Bugzilla::BugMail::Send(
-            $self->bug->bug_id, { changer => Bugzilla->user }
-        );
+        $self->bug->send_changes($changes);
         return 1;
     }
     $self->last_sync_now();

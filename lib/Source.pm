@@ -29,7 +29,6 @@ use Bugzilla::Util qw(trick_taint trim);
 use JSON;
 use Scalar::Util qw(blessed);
 
-
 use base qw(Bugzilla::Object);
 
 
@@ -74,6 +73,7 @@ use constant REQUIRED_METHODS => qw(
     check_options
     fetch_comments
     fetch_changes
+    fetch_full
 );
 
 sub check_sources {
@@ -244,6 +244,72 @@ sub is_valid_url {
 sub post_changes {
     my ($self, $url, $bug, $changes) = @_;
     return 0;
+}
+
+sub create_tracking_bug {
+    my ($class, $url) = @_;
+    my $dbh = Bugzilla->dbh;
+
+    my $tracksource = $class->get_for_url($url);
+    ThrowUserError("remotetrack_no_source_for_url", {url => $url})
+        unless $tracksource;
+    my $data = $tracksource->fetch_full($url);
+    my $params = $tracksource->get_new_bug_params($data);
+
+    my $active_user = Bugzilla->user;
+    unless ($active_user and $active_user->id) {
+        Bugzilla->set_user(
+            Bugzilla::User->check(Bugzilla->params->{remotetrack_user})
+        );
+    }
+
+    $dbh->bz_start_transaction();
+    my $bug = Bugzilla::Bug->create($params);
+    my $trackurl = Bugzilla::Extension::RemoteTrack::Url->create({
+        bug_id => $bug->id,
+        source_id => $tracksource->id,
+        value => $url,
+        last_sync => $bug->creation_ts,
+        active => 1,
+    });
+    $bug->{remotetrack_url_obj} = $trackurl;
+    $dbh->bz_commit_transaction();
+
+    $bug->send_changes();
+    Bugzilla->set_user($active_user);
+    return $bug;
+}
+
+sub get_new_bug_params {
+    my ($self, $data) = @_;
+    my $params = {
+        product => Bugzilla->params->{remotetrack_default_product},
+        component => Bugzilla->params->{remotetrack_default_component},
+        version => Bugzilla->params->{remotetrack_default_version},
+        see_also => $data->{url},
+        short_desc => $data->{summary},
+        comment => $self->comment_from_data($data),
+    };
+
+    Bugzilla::Hook::process(
+        'remotetrack_new_bug_params',
+        {
+            source => $self,
+            params => $params,
+            data => $data,
+        }
+    );
+    return $params;
+}
+
+sub comment_from_data {
+    my ($self, $data) = @_;
+    my $comment;
+    my $template = Bugzilla->template;
+    $template->process(
+        'remotetrack/local_comment.txt.tmpl', $data, \$comment
+    ) || ThrowTemplateError($template->error());
+    return $comment;
 }
 
 1;
