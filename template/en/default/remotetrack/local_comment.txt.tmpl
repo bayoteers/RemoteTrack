@@ -5,7 +5,7 @@ Remote tracking item [% url FILTER none %]
 [%- END %]
 [%- IF raw_data %]
 ----------------------------------------
-[%- FOREACH f IN raw_data.pairs %]
+[%- FOREACH f IN fields.pairs %]
 * [% f.key %]: [% f.value %][% END %]
 [% END %]
 [%- FOREACH comment IN comments %]

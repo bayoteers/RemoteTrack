@@ -28,6 +28,7 @@ use Bugzilla::Util qw(datetime_from);
 use Data::Dumper;
 use Email::Address;
 use XMLRPC::Lite;
+use List::Util qw(none);
 
 sub check_options {
     my ($invocant, $options) = @_;
@@ -52,7 +53,7 @@ sub check_options {
             }
         } elsif ($key eq 'post_comments' || $key eq 'post_changes') {
             $value = $value ? 1 : 0
-        } elsif ($key ne 'username' && $key ne 'password') {
+        } elsif (none {$key eq $_} qw(username password excluded_fields) ) {
             $value = undef;
         }
         if (defined $value) {
@@ -147,10 +148,12 @@ sub fetch_changes {
     my $params = {ids => [$bug_id]};
     my $result = $self->_xmlrpc('Bug.history', $params);
     my @changes;
+    my @excluded = $self->_excluded_fields;
     return \@changes unless defined $result;
     for my $c (@{$result->{bugs}->[0]->{history}}) {
         next if ($since && $since > datetime_from($c->{when}.'Z'));
         for my $f (@{$c->{changes}}) {
+            next if (grep {$_ eq $f->{field_name}} @excluded);
             push(@changes,
                 {
                     who => $c->{who},
@@ -180,11 +183,38 @@ sub fetch_full {
     return {
         url => $url,
         raw_data => $raw_data,
+        fields => $self->_filter_fields($raw_data),
         summary => $raw_data->{summary},
         description => $description->{text},
         comments => $comments,
         changes => $changes,
     };
+}
+
+sub _filter_fields {
+    my ($self, $data) = @_;
+    my @excluded = $self->_excluded_fields;
+    my %fields;
+    while (my ($key, $value) = each %$data) {
+        next if (grep {$_ eq $key} @excluded);
+        if (ref($value) eq 'ARRAY') {
+            $value = join(', ', @$value);
+        }
+        $fields{$key} = $value;
+    }
+    return \%fields;
+}
+
+sub _excluded_fields {
+    my $self = shift;
+    return (
+        qw(
+            assigned_to_detail
+            cc_detail
+            creator_detail
+        ),
+        split(/[,\s]+/, $self->options->{excluded_fields} or ''),
+    );
 }
 
 sub _comment_url {
