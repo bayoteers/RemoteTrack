@@ -273,6 +273,12 @@ sub create_tracking_bug {
         active => 1,
     });
     $bug->{remotetrack_url_obj} = $trackurl;
+    if (Bugzilla->params->{remotetrack_comment_tag}) {
+        $bug->comments->[0]->add_tag(
+            Bugzilla->params->{remotetrack_comment_tag}
+        );
+        $bug->comments->[0]->update();
+    }
     $dbh->bz_commit_transaction();
 
     $bug->send_changes();

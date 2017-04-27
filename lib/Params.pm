@@ -10,6 +10,7 @@ use warnings;
 use strict;
 
 use Bugzilla::Config::Common qw(check_group);
+use Bugzilla::Comment;
 
 sub get_param_list {
     return (
@@ -54,6 +55,11 @@ sub get_param_list {
             name => 'remotetrack_default_version',
             type => 't',
             default => '',
+        }, {
+            name => 'remotetrack_comment_tag',
+            type => 't',
+            default => '',
+            checker => \&_check_tag
         },
     );
 }
@@ -75,6 +81,17 @@ sub _check_template {
         unless ($template->process(\$value, {}, \$result)) {
             return $template->error;
         }
+    }
+    return "";
+}
+
+sub _check_tag {
+    my $value = shift;
+    if ($value) {
+        eval {
+            Bugzilla::Comment->_check_tag($value);
+        };
+        return $@ if $@;
     }
     return "";
 }
