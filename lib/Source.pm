@@ -247,14 +247,17 @@ sub post_changes {
 }
 
 sub create_tracking_bug {
-    my ($class, $url) = @_;
+    my ($self, $url) = @_;
     my $dbh = Bugzilla->dbh;
 
-    my $tracksource = $class->get_for_url($url);
-    ThrowUserError("remotetrack_no_source_for_url", {url => $url})
-        unless $tracksource;
-    my $data = $tracksource->fetch_full($url);
-    my $params = $tracksource->get_new_bug_params($data);
+    if(!ref($self)) {
+        $self = $self->get_for_url($url);
+        ThrowUserError("remotetrack_no_source_for_url", {url => $url})
+            unless defined $self;
+    }
+
+    my $data = $self->fetch_full($url);
+    my $params = $self->get_new_bug_params($data);
 
     my $active_user = Bugzilla->user;
     unless ($active_user and $active_user->id) {
@@ -267,7 +270,7 @@ sub create_tracking_bug {
     my $bug = Bugzilla::Bug->create($params);
     my $trackurl = Bugzilla::Extension::RemoteTrack::Url->create({
         bug_id => $bug->id,
-        source_id => $tracksource->id,
+        source_id => $self->id,
         value => $url,
         last_sync => $bug->creation_ts,
         active => 1,

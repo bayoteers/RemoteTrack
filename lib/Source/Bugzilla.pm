@@ -78,22 +78,27 @@ sub handle_mail_notification {
     my $action = $email->header('X-Bugzilla-Type') || '';
     return 0 if ($self->options->{base_url} ne $bz_url
                  || $self->options->{from_email} ne $from->address
-                 || $action ne 'changed');
+                 || (none {$action eq $_} qw(changed new))
+    );
 
     my $msgid = $email->header('Message-ID');
     my ($id) = $msgid =~ /^<bug-(\d*)-/;
-    if ($id) {
+    if (!$id) {
+        ThrowCodeError('remotetrack_email_error', {
+            err => "Failed to parse bug ID from message ID '$msgid'",
+        });
+    }
+    my $url = $self->options->{base_url}."show_bug.cgi?id=$id";
+    if ($action eq 'changed') {
         my $urls = Bugzilla::Extension::RemoteTrack::Url->match({
             source_id => $self->id,
-            value => $self->options->{base_url}."show_bug.cgi?id=$id",
+            value => $url,
         });
         for my $url (@$urls) {
             $url->sync_from_remote();
         }
-    } else {
-        ThrowCodeError('remotetrack_email_error', {
-            err => "Failed to parse bug ID from message ID '$msgid'",
-        });
+    } elsif ($action eq 'new') {
+        my $bug = $self->create_tracking_bug($url);
     }
     return 1;
 }
