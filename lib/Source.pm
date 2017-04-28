@@ -74,6 +74,8 @@ use constant REQUIRED_METHODS => qw(
     fetch_comments
     fetch_changes
     fetch_full
+    url_to_id
+    id_to_url
 );
 
 sub check_sources {
@@ -298,6 +300,7 @@ sub get_new_bug_params {
         see_also => $data->{url},
         short_desc => $data->{summary},
         comment => $self->comment_from_data($data),
+        alias => $self->url_to_alias($data->{url}),
     };
 
     Bugzilla::Hook::process(
@@ -319,6 +322,11 @@ sub comment_from_data {
         'remotetrack/local_comment.txt.tmpl', $data, \$comment
     ) || ThrowTemplateError($template->error());
     return $comment;
+}
+
+sub url_to_alias {
+    my ($self, $url) = @_;
+    return $self->name . "#" . $self->url_to_id($url);
 }
 
 1;

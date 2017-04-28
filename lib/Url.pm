@@ -158,4 +158,9 @@ sub post_changes {
     $self->source->post_changes($self->value, $self->bug, $changes);
 }
 
+sub alias {
+    my ($self) = @_;
+    return $self->source->url_to_alias($self->value);
+}
+
 1;

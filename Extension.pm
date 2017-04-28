@@ -216,6 +216,19 @@ sub bug_start_of_update {
         $changes->{'remotetrack_url'} = [ $old_bug->remotetrack_url,
                 $bug->remotetrack_url ];
     }
+    # Update aliases as needed
+    my $old_alias = $old_bug->remotetrack_url ?
+        $old_bug->remotetrack_url_obj->alias : '';
+    my $new_alias = $bug->remotetrack_url ?
+        $bug->remotetrack_url_obj->alias : '';
+    if ($old_alias && $old_alias ne $new_alias) {
+        $bug->remove_alias($old_alias);
+    }
+    if ($new_alias) {
+        # Allways add new alias, so that user can't remove it.
+        # Could probably be implemented smarter
+        $bug->add_alias($new_alias);
+    }
 }
 
 sub bugmail_recipients {

@@ -110,7 +110,7 @@ sub is_valid_url {
     return ($url =~ /^$base/) ? 1 : 0;
 }
 
-sub _bug_id_from_url {
+sub url_to_id {
     my ($self, $url) = @_;
     ThrowCodeError('invalid_parameter',
         {
@@ -122,9 +122,15 @@ sub _bug_id_from_url {
     return $bug_id;
 }
 
+sub id_to_url {
+    my ($self, $id) = @_;
+    my $base = $self->options->{base_url};
+    return "$base/show_bug.cgi?id=$id";
+}
+
 sub fetch_comments {
     my ($self, $url, $since) = @_;
-    my $bug_id = $self->_bug_id_from_url($url);
+    my $bug_id = $self->url_to_id($url);
     my $params = {ids => [$bug_id]};
     if ($since) {
         $since = datetime_from($since);
@@ -148,7 +154,7 @@ sub fetch_comments {
 
 sub fetch_changes {
     my ($self, $url, $since) = @_;
-    my $bug_id = $self->_bug_id_from_url($url);
+    my $bug_id = $self->url_to_id($url);
     $since = $since ? datetime_from($since) : undef;
     my $params = {ids => [$bug_id]};
     my $result = $self->_xmlrpc('Bug.history', $params);
@@ -175,7 +181,7 @@ sub fetch_changes {
 
 sub fetch_full {
     my ($self, $url) = @_;
-    my $bug_id = $self->_bug_id_from_url($url);
+    my $bug_id = $self->url_to_id($url);
     my $params = {ids => [$bug_id]};
     my $result = $self->_xmlrpc('Bug.get', $params);
     my $raw_data = $result->{bugs}->[0];
@@ -237,7 +243,7 @@ sub _can_post_comment {
 sub _post_comment {
     my ($self, $url, $comment) = @_;
     return 0 unless $self->_can_post_comment;
-    my $bug_id = $self->_bug_id_from_url($url);
+    my $bug_id = $self->url_to_id($url);
     my $token = $self->_rpctoken;
     if (!$token) {
         return 0;
