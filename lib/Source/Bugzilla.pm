@@ -124,8 +124,7 @@ sub url_to_id {
 
 sub id_to_url {
     my ($self, $id) = @_;
-    my $base = $self->options->{base_url};
-    return "$base/show_bug.cgi?id=$id";
+    return $self->options->{base_url} . "show_bug.cgi?id=$id";
 }
 
 sub fetch_comments {
