@@ -329,4 +329,21 @@ sub url_to_alias {
     return $self->name . "#" . $self->url_to_id($url);
 }
 
+sub alias_to_url {
+    my ($self, $alias) = @_;
+    my ($name, $id) = split(/#/, $alias);
+    return unless ($name && $id);
+    if (ref $self) {
+        if ($name ne $self->name) {
+            ThrowCodeError('remotetrack_invalid_alias_for_source', {
+                alias => $alias,
+                source => $self,
+            });
+        }
+    } else {
+        $self = $self->check($name);
+    }
+    return $self->id_to_url($id);
+}
+
 1;
