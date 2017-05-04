@@ -326,6 +326,9 @@ sub comment_from_data {
 
 sub url_to_alias {
     my ($self, $url) = @_;
+    if (!ref $self) {
+        $self = $self->get_for_url($url);
+    }
     return $self->name . "#" . $self->url_to_id($url);
 }
 
