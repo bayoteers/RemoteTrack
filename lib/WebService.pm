@@ -93,6 +93,7 @@ sub tracking_bugs {
         if ($errors[$i]) {
             $response{errors} ||= {};
             $response{errors}->{$orig} = $errors[$i];
+            $response{$orig} = [];
             next;
         }
         my $bug = Bugzilla::Bug->new($aliases[$i]);
