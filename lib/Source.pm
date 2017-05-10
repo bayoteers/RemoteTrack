@@ -331,6 +331,9 @@ sub url_to_alias {
     my ($self, $url) = @_;
     if (!ref $self) {
         $self = $self->get_for_url($url);
+        return unless $self;
+    } elsif (!$self->is_valid_url($url)) {
+        return;
     }
     return $self->name . "#" . $self->url_to_id($url);
 }
