@@ -254,11 +254,13 @@ sub create_tracking_bug {
 
     if(!ref($self)) {
         $self = $self->get_for_url($url);
-        ThrowUserError("remotetrack_no_source_for_url", {url => $url})
+        ThrowUserError("remotetrack_invalid_url", {url => $url})
             unless defined $self;
     }
 
     my $data = $self->fetch_full($url);
+    ThrowUserError('remotetrack_item_not_found', {url => $url})
+        unless defined $data;
     my $params = $self->get_new_bug_params($data);
 
     my $active_user = Bugzilla->user;

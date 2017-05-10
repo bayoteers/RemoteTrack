@@ -12,4 +12,8 @@
   This is a tracking [% terms.bug %] and cannot be marked at duplicate.
   If you really want to mark it as duplicate, you need to change the tracking
   status first.
+[% ELSIF error == "remotetrack_invalid_url" %]
+  '[% url FILTER html %]' is not valid remote tracking URL.
+[% ELSIF error == "remotetrack_item_not_found" %]
+  Remote item at '[% url FILTER html %]' was not found or not accessible.
 [% END %]

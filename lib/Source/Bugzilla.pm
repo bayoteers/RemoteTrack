@@ -137,6 +137,7 @@ sub fetch_comments {
         $params->{new_since} = $since->ymd('').'T'.$since->hms.'Z';
     }
     my $result = $self->_xmlrpc('Bug.comments', $params);
+    return unless defined $result;
     my @comments;
     return \@comments unless defined $result;
     for my $c (@{$result->{bugs}->{$bug_id}->{comments}}) {
@@ -157,9 +158,9 @@ sub fetch_changes {
     $since = $since ? datetime_from($since) : undef;
     my $params = {ids => [$bug_id]};
     my $result = $self->_xmlrpc('Bug.history', $params);
+    return unless defined $result;
     my @changes;
     my @excluded = $self->_excluded_fields;
-    return \@changes unless defined $result;
     for my $c (@{$result->{bugs}->[0]->{history}}) {
         next if ($since && $since > datetime_from($c->{when}.'Z'));
         for my $f (@{$c->{changes}}) {
@@ -183,7 +184,9 @@ sub fetch_full {
     my $bug_id = $self->url_to_id($url);
     my $params = {ids => [$bug_id]};
     my $result = $self->_xmlrpc('Bug.get', $params);
+    return unless $result;
     my $raw_data = $result->{bugs}->[0];
+    return unless $raw_data;
 
     my $comments = $self->fetch_comments($url);
     my $description = shift @$comments;
@@ -304,7 +307,7 @@ sub _xmlrpc {
         local $Data::Dumper::Indent = 0;
         local $Data::Dumper::Purity = 1;
         warn "Remote Bugzilla XMLRPC call $method(".Dumper($params).") failed: ". $err;
-        # TODO better error handling
+        $self->{error} = "Remote call failed: $err";
         return;
     }
     return $response->result;
