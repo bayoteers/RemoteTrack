@@ -139,6 +139,10 @@ sub object_before_delete {
     my ($self, $args) = @_;
     my $obj = $args->{object};
     if ($obj->isa('Bugzilla::BugUrl')) {
+        my $url = Bugzilla::Extension::RemoteTrack::Source->normalize_url(
+            $obj->name
+        );
+        return unless defined $url;
         my $rt_url = Bugzilla::Extension::RemoteTrack::Url->new({
             condition => "bug_id = ? AND value = ?",
             values => [$obj->bug_id, $obj->name],

@@ -257,6 +257,7 @@ sub create_tracking_bug {
         ThrowUserError("remotetrack_invalid_url", {url => $url})
             unless defined $self;
     }
+    $url = $self->normalize_url($url);
 
     my $data = $self->fetch_full($url);
     ThrowUserError('remotetrack_item_not_found', {url => $url})
@@ -348,6 +349,18 @@ sub alias_to_url {
     } else {
         $self = $self->check($name);
     }
+    return $self->id_to_url($id);
+}
+
+sub normalize_url {
+    my ($self, $url) = @_;
+    if (!ref $self) {
+        $self = $self->get_for_url($url);
+        return unless $self;
+    } elsif (!$self->is_valid_url($url)) {
+        return;
+    }
+    my $id = $self->url_to_id($url);
     return $self->id_to_url($id);
 }
 
