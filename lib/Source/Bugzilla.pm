@@ -225,6 +225,10 @@ sub _excluded_fields {
             assigned_to_detail
             cc_detail
             creator_detail
+            is_cc_accessible
+            is_confirmed
+            is_creator_accessible
+            is_open
         ),
         split(/[,\s]+/, $self->options->{excluded_fields} || ''),
     );
