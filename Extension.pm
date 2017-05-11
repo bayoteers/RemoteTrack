@@ -124,7 +124,15 @@ sub search_operator_field_override {
 
     $operators->{'remotetrack_url'}->{_default} = sub {
         my ($self, $args) = @_;
-        my ($chart_id, $joins) = @$args{qw(chart_id joins)};
+        my ($chart_id, $joins, $value) = @$args{qw(chart_id joins value)};
+        my $dbh = Bugzilla->dbh;
+
+        my $url = Bugzilla::Extension::RemoteTrack::Source->normalize_url($value);
+        if (defined $url) {
+            $args->{value} = $url;
+            $args->{quoted} = $dbh->quote($url);
+        }
+
         my $table = "map_remotetrack_url_$chart_id";
         push(@$joins, {
             table => "remotetrack_url",
