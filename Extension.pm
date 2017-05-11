@@ -105,7 +105,7 @@ sub buglist_columns {
     my $columns = $args->{columns};
     $columns->{"remotetrack_url"} = {
         name => "map_remotetrack_url.value",
-        title => "Remote Sync URL" };
+        title => "Tracking URL" };
 }
 
 sub buglist_column_joins {
