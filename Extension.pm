@@ -250,12 +250,16 @@ sub bug_start_of_update {
                 $urlobj->update();
             } else {
                 # ...or create new one if there isn't
+                Bugzilla::Extension::RemoteTrack::Url->check_existing(
+                    $bug->remotetrack_url);
                 my $source = Bugzilla::Extension::RemoteTrack::Source->get_for_url(
                     $bug->remotetrack_url);
-                ThrowUserError("remotetrack_no_source_for_url", {
+                ThrowUserError("remotetrack_invalid_url", {
                     url => $bug->remotetrack_url }) unless defined $source;
                 $urlobj = Bugzilla::Extension::RemoteTrack::Url->create({
-                    bug_id => $bug->id, source_id => $source->id, active => 1,
+                    bug_id => $bug->id,
+                    source_id => $source->id,
+                    active => 1,
                     value => $bug->remotetrack_url,
                     last_sync => $timestamp,
                 });
