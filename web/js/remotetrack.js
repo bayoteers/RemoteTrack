@@ -10,13 +10,63 @@
 (function( RemoteTrack, $, undefined ) {
 
     RemoteTrack.init = function(opts) {
-        if(opts.userInGroup) {
-            initEditor(opts);
-        } else {
-            markTracked(opts.url);
+        if (opts.bugId) {
+            if (opts.userInGroup) {
+                initEditor(opts);
+            } else {
+                markTracked(opts.url);
+            }
+        } else if (opts.userInGroup) {
+            initBugEntry();
         }
     }
 
+    function initBugEntry() {
+        var $see_also = $("[name=see_also]");
+        var $remotetrack_url = $("[name=remotetrack_url]");
+        var $remotetrack_url_error = $("#remotetrack_url_error");
+        var $remotetrack_fetch = $("#remotetrack_fetch");
+
+        $remotetrack_fetch.click(function() {
+            var url = $remotetrack_url.val();
+            if(!url) return;
+            $remotetrack_url_error.hide();
+            $remotetrack_fetch.prop("disabled", true);
+            new Rpc("RemoteTrack", "clone_remote", {"url": url})
+                .done(function(result) {
+                    $("[name=short_desc]").val(result.summary);
+                    var orig_comment = $("[name=comment]").val();
+                    orig_comment += orig_comment ? '\n\n' : '';
+                    $("[name=comment]").val(
+                        orig_comment + result.comment
+                    );
+                    $remotetrack_url.val(result.url);
+                    $see_also.val(result.url).prop("disabled", true);
+                    if (result.existing_bug) {
+                        $remotetrack_url_error.html(
+                            'Tracking bug exists: <a href="show_bug.cgi?id=' +
+                            result.existing_bug + '">' +
+                            result.existing_bug + '</a>'
+                        ).show();
+                    }
+                })
+                .fail(function(result) {
+                    $remotetrack_url_error.text(result.message).show();
+                })
+                .complete(function() {
+                    $remotetrack_fetch.prop("disabled", false);
+                });
+        });
+        $remotetrack_url.change(function() {
+            var value = $remotetrack_url.val();
+            $see_also.val(value);
+            if (value == "") {
+                $see_also.prop("disabled", false);
+            } else {
+                $see_also.prop("disabled", true);
+            }
+        });
+    }
 
     function initEditor(opts) {
         var seeAlsoUrls = [];

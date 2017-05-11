@@ -1,0 +1,22 @@
+[%# This Source Code Form is subject to the terms of the Mozilla Public
+  # License, v. 2.0. If a copy of the MPL was not distributed with this
+  # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+  #
+  # Copyright (C) 2017 Jolla Ltd.
+  # Contact: Pami Ketolainen <pami.ketolainen@jolla.com>
+  #%]
+
+[% IF user.in_group(Param('remotetrack_group')) %]
+<tr>
+    <th class="field_label" id="field_label_remotetrack_url">
+        <label for="remotetrack_url">
+            <a href="page.cgi?id=fields.html#">Tracking URL:</a>
+        </label>
+    </th>
+    <td colspan="3">
+        <input name="remotetrack_url" value="">
+        <button id="remotetrack_fetch" type="button">Fetch</button>
+        <div id="remotetrack_url_error" class="validation_error_text"></div>
+    </td>
+</tr>
+[% END %]

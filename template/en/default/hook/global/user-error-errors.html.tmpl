@@ -16,4 +16,7 @@
   '[% url FILTER html %]' is not valid remote tracking URL.
 [% ELSIF error == "remotetrack_item_not_found" %]
   Remote item at '[% url FILTER html %]' was not found or not accessible.
+[% ELSIF error == "remotetrack_bug_exists" %]
+  Remote tracking [% terms.bug %] [%+ bug_id FILTER bug_link(bug_id) FILTER none %]
+  already exists for URL '[% url FILTER html %]'
 [% END %]

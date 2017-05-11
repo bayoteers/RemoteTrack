@@ -12,12 +12,14 @@ use strict;
 use Bugzilla::Constants;
 use Bugzilla::Error;
 use Bugzilla::Extension::RemoteTrack::Source;
+use Bugzilla::Extension::RemoteTrack::Url;
 
 use base qw(Bugzilla::WebService);
 
 use constant PUBLIC_METHODS => qw(
     valid_urls
     tracking_bugs
+    clone_remote
 );
 
 sub valid_urls {
@@ -116,6 +118,30 @@ sub tracking_bugs {
         }
 
     }
+    return \%response;
+}
+
+sub clone_remote {
+    my ($self, $params) = @_;
+    my $url = $params->{url};
+    Bugzilla->login(LOGIN_REQUIRED);
+    my $source = Bugzilla::Extension::RemoteTrack::Source->get_for_url($url);
+    ThrowUserError('remotetrack_invalid_url', {url => $url})
+        unless defined $source;
+    $url = $source->normalize_url($url);
+    my $existing = Bugzilla::Extension::RemoteTrack::Url->check_existing(
+        $url, 1);
+
+    my $data = $source->fetch_full($url);
+    ThrowUserError('remotetrack_item_not_found', {url => $url})
+        unless defined $data;
+
+    my %response;
+    $response{url} = $url;
+    $response{comment} = $source->comment_from_data($data);
+    $response{summary} = $data->{summary};
+    $response{fields} = $data->{fields};
+    $response{existing_bug} = defined $existing ? $existing->bug_id : undef;
     return \%response;
 }
 1;

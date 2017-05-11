@@ -55,6 +55,21 @@ use constant VALIDATORS => {
 use constant VALIDATOR_DEPENDENCIES => {
 };
 
+sub check_existing {
+    my ($class, $url, $no_error) = @_;
+    my $urlobj = $class->new({
+        condition => "active = 1 AND value = ?",
+        values => [$url],
+    });
+    if (defined $urlobj && !$no_error) {
+        ThrowUserError('remotetrack_bug_exists', {
+            url => $url,
+            bug_id => $urlobj->bug_id,
+        });
+    }
+    return $urlobj;
+}
+
 #############
 # Accessors #
 #############

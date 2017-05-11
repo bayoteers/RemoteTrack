@@ -143,6 +143,44 @@ sub search_operator_field_override {
     };
 }
 
+sub object_before_create {
+    my ($self, $args) = @_;
+    my ($class, $params) = @$args{qw(class params)};
+    if ($class->isa("Bugzilla::Bug")) {
+        my $url = Bugzilla->input_params->{remotetrack_url};
+        if ($url) {
+            my $source = Bugzilla::Extension::RemoteTrack::Source->get_for_url(
+                $url);
+            ThrowUserError("remotetrack_invalid_url", {url => $url })
+                unless defined $source;
+            $url = $source->normalize_url($url);
+            Bugzilla::Extension::RemoteTrack::Url->check_existing($url);
+            Bugzilla->input_params->{remotetrack_url} = $url;
+            $params->{see_also} = $url;
+            $params->{alias} = $source->url_to_alias($url);
+        }
+    }
+}
+
+sub bug_end_of_create {
+    my ($self, $args) = @_;
+    my ($bug, $timestamp) = @$args{qw(bug timestamp)};
+    my $url = Bugzilla->input_params->{remotetrack_url};
+    if ($url) {
+        # URL validity has been checked in object_before_create
+        my $source = Bugzilla::Extension::RemoteTrack::Source->get_for_url(
+            $url);
+        my $urlobj = Bugzilla::Extension::RemoteTrack::Url->create({
+            bug_id => $bug->id,
+            source_id => $source->id,
+            active => 1,
+            value => $url,
+            last_sync => $timestamp,
+        });
+        $bug->{remotetrack_url_obj} = $urlobj;
+    }
+}
+
 sub object_before_delete {
     my ($self, $args) = @_;
     my $obj = $args->{object};

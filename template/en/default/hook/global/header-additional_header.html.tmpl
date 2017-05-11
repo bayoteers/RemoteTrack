@@ -8,6 +8,7 @@
 
 [% bug_templates = [
   'bug/show.html.tmpl',
+  'bug/create/create.html.tmpl',
   'bug/create/created.html.tmpl',
   'bug/process/results.html.tmpl'
   ] %]
@@ -26,7 +27,7 @@
   <script type="text/javascript">
     $(function() {
         RemoteTrack.init({
-            bugId: [% bug.id %],
+            bugId: [% bug.id or 0 %],
             url: "[% bug.remotetrack_url FILTER js %]",
             userInGroup: [% user.in_group(Param('remotetrack_group')) ? 'true' : 'false' %],
             manualSyncEnabled: [% Param('remotetrack_manual_sync') ? 'true' : 'false' %]
@@ -34,4 +35,3 @@
     })
   </script>
 [% END %]
-
