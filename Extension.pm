@@ -203,16 +203,17 @@ sub object_before_delete {
 sub object_end_of_set_all {
     my ($self, $args) = @_;
     my $bug = $args->{object};
-    return unless (
+    if (
         Bugzilla->usage_mode == USAGE_MODE_BROWSER &&
         $bug->isa("Bugzilla::Bug")
-    );
-    # If we are editing bug via browser, we need to manually set remotetrack_url,
-    # because it is not included in set_all in process_bug.cgi
-    my $cgi = Bugzilla->cgi;
-    my $url = $cgi->param('remotetrack_url');
-    return if (!defined $url);
-    $bug->set_remotetrack_url($url);
+    ) {
+        # If we are editing bug via browser, we need to manually set
+        # remotetrack_url, because it is not included in set_all in
+        # process_bug.cgi
+        my $url = Bugzilla->input_params->{remotetrack_url};
+        return if (!defined $url);
+        $bug->set_remotetrack_url($url);
+    }
 }
 
 sub bug_check_can_change_field {
