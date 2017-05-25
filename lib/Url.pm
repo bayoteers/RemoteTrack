@@ -110,7 +110,7 @@ sub set_active {
 
 sub last_sync_now {
     my $self = shift;
-    $self->set('last_sync', DateTime->now(time_zone => Bugzilla->local_timezone));
+    $self->set('last_sync', DateTime->now(time_zone => 'UTC'));
 }
 
 ##############
@@ -121,13 +121,6 @@ sub last_sync_now {
 # Sync methos #
 ###############
 
-sub new_comments {
-    my $self = shift;
-    return $self->source->fetch_comments(
-        $self->value, $self->last_sync
-    );
-}
-
 sub new_changes {
     my $self = shift;
     return $self->source->fetch_changes(
@@ -136,25 +129,39 @@ sub new_changes {
 }
 
 sub sync_from_remote {
-    my $self = shift;
-    my @comments = @{$self->new_comments || []};
-    my @changes = @{$self->new_changes || []};
-    if (@comments || @changes) {
-        my $data = {
-            comments => \@comments,
-            changes => \@changes,
-            url=> $self->value
-        };
-        my $comment = $self->source->comment_from_data($data);
-
-        Bugzilla->dbh->bz_start_transaction;
-        $self->bug->add_comment($comment);
-        my $changes = $self->bug->update();
+    my ($self, $nomail) = @_;
+    my $active_user = Bugzilla->user;
+    my $remotetrack_user = Bugzilla::User->check(
+        Bugzilla->params->{remotetrack_user}
+    );
+    my $changes = $self->new_changes || [];
+    if (@$changes) {
+        Bugzilla->set_user($remotetrack_user);
+        my $dbh = Bugzilla->dbh;
+        my $delta_ts = $dbh->selectrow_array('SELECT LOCALTIMESTAMP(0)');
+        $dbh->bz_start_transaction;
+        for my $change_set (@$changes) {
+            my $text = $self->source->comment_from_changes(
+                $change_set, $self->value
+            );
+            my $comment_tag = Bugzilla->params->{remotetrack_comment_tag};
+            my $comment = Bugzilla::Comment->create({
+                bug_id => $self->bug_id,
+                bug_when => $delta_ts,
+                thetext => $text,
+            });
+            if ($comment_tag) {
+                $comment->add_tag($comment_tag);
+                $comment->update();
+            }
+        }
         $self->last_sync_now();
         $self->update();
-        Bugzilla->dbh->bz_commit_transaction;
+        my $bug_changes = $self->bug->update($delta_ts);
+        $dbh->bz_commit_transaction;
 
-        $self->bug->send_changes($changes);
+        $self->bug->send_changes($bug_changes) unless $nomail;
+        Bugzilla->set_user($active_user);
         return 1;
     }
     $self->last_sync_now();

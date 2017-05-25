@@ -136,12 +136,13 @@ sub clone_remote {
     ThrowUserError('remotetrack_item_not_found', {url => $url})
         unless defined $data;
 
-    my %response;
-    $response{url} = $url;
-    $response{comment} = $source->comment_from_data($data);
-    $response{summary} = $data->{summary};
-    $response{fields} = $data->{fields};
-    $response{existing_bug} = defined $existing ? $existing->bug_id : undef;
-    return \%response;
+    my $response = {
+        url => $url,
+        comment => $source->description_from_data($data),
+        summary => $data->{summary},
+        fields => $data->{fields},
+        existing_bug => defined $existing ? $existing->bug_id : undef,
+    };
+    return $response;
 }
 1;

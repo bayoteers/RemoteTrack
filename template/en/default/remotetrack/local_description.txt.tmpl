@@ -1,0 +1,9 @@
+Remote tracking item [% url FILTER none %]
+----------------------------------------
+[%+ description %]
+[%- IF raw_data %]
+----------------------------------------
+[%- FOREACH f IN fields.pairs %]
+* [% f.key %]: [% f.value %][% END %]
+[% END %]
+----------------------------------------

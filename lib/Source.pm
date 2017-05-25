@@ -71,7 +71,6 @@ sub CLASSES {
 
 use constant REQUIRED_METHODS => qw(
     check_options
-    fetch_comments
     fetch_changes
     fetch_full
     url_to_id
@@ -265,10 +264,11 @@ sub create_tracking_bug {
     my $params = $self->get_new_bug_params($data);
 
     my $active_user = Bugzilla->user;
+    my $remotetrack_user = Bugzilla::User->check(
+        Bugzilla->params->{remotetrack_user}
+    );
     unless ($active_user and $active_user->id) {
-        Bugzilla->set_user(
-            Bugzilla::User->check(Bugzilla->params->{remotetrack_user})
-        );
+        Bugzilla->set_user($remotetrack_user);
     }
 
     $dbh->bz_start_transaction();
@@ -281,11 +281,23 @@ sub create_tracking_bug {
         active => 1,
     });
     $bug->{remotetrack_url_obj} = $trackurl;
-    if (Bugzilla->params->{remotetrack_comment_tag}) {
-        $bug->comments->[0]->add_tag(
-            Bugzilla->params->{remotetrack_comment_tag}
-        );
+    my $comment_tag = Bugzilla->params->{remotetrack_comment_tag};
+    if ($comment_tag) {
+        $bug->comments->[0]->add_tag($comment_tag);
         $bug->comments->[0]->update();
+    }
+    Bugzilla->set_user($remotetrack_user);
+    for my $changes (@{$data->{changes}}) {
+        my $text = $self->comment_from_changes($changes, $data->{url});
+        my $comment = Bugzilla::Comment->create({
+            bug_id => $bug->id,
+            bug_when => $bug->creation_ts,
+            thetext => $text,
+        });
+        if ($comment_tag) {
+            $comment->add_tag($comment_tag);
+            $comment->update();
+        }
     }
     $dbh->bz_commit_transaction();
 
@@ -302,7 +314,7 @@ sub get_new_bug_params {
         version => Bugzilla->params->{remotetrack_default_version},
         see_also => $data->{url},
         short_desc => $data->{summary},
-        comment => $self->comment_from_data($data),
+        comment => $self->description_from_data($data),
         alias => $self->url_to_alias($data->{url}),
     };
 
@@ -317,12 +329,23 @@ sub get_new_bug_params {
     return $params;
 }
 
-sub comment_from_data {
+sub description_from_data {
     my ($self, $data) = @_;
     my $comment;
     my $template = Bugzilla->template;
     $template->process(
-        'remotetrack/local_comment.txt.tmpl', $data, \$comment
+        'remotetrack/local_description.txt.tmpl', $data, \$comment
+    ) || ThrowTemplateError($template->error());
+    return $comment;
+}
+
+sub comment_from_changes {
+    my ($self, $changes, $url) = @_;
+    my $comment;
+    my $template = Bugzilla->template;
+    my %vars = (%$changes, url => $url);
+    $template->process(
+        'remotetrack/local_changes.txt.tmpl', \%vars, \$comment
     ) || ThrowTemplateError($template->error());
     return $comment;
 }

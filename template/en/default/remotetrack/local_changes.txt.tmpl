@@ -1,0 +1,13 @@
+Remote tracking item [% url FILTER none %]
+Changed by [% who FILTER none %] at [% when FILTER none %]
+----------------------------------------
+[%- FOREACH change IN changes %]
+[%- IF change.comment %]
+Added comment [% IF change.url %][% change.url %][% END %]
+
+[%+ change.comment FILTER none %]
+----------------------------------------
+[%- ELSIF change.field %]
+* Changed [% change.field %]: [%+ change.from %] -> [% change.to %]
+[% END %]
+[%- END %]

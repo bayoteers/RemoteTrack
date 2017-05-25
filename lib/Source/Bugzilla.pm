@@ -93,6 +93,7 @@ sub handle_mail_notification {
         my $urls = Bugzilla::Extension::RemoteTrack::Url->match({
             source_id => $self->id,
             value => $url,
+            active => 1,
         });
         for my $url (@$urls) {
             $url->sync_from_remote();
@@ -141,10 +142,12 @@ sub fetch_comments {
     my @comments;
     return \@comments unless defined $result;
     for my $c (@{$result->{bugs}->{$bug_id}->{comments}}) {
+        my $when = datetime_from($c->{creation_time}, 'UTC');
         push(@comments,
             {
-                who => $c->{creator}, when => $c->{creation_time}.'Z',
-                text => $c->{text},
+                who => $c->{creator},
+                when => $when,
+                comment => $c->{text},
                 url => $self->_comment_url($bug_id, $c->{count})
             }
         );
@@ -153,22 +156,53 @@ sub fetch_comments {
 }
 
 sub fetch_changes {
-    my ($self, $url, $since) = @_;
+    my ($self, $url, $since, $include_description) = @_;
     my $bug_id = $self->url_to_id($url);
     $since = $since ? datetime_from($since) : undef;
     my $params = {ids => [$bug_id]};
-    my $result = $self->_xmlrpc('Bug.history', $params);
+    if ($since) {
+        $since = datetime_from($since);
+        $params->{new_since} = $since->ymd('').'T'.$since->hms.'Z';
+    }
+
+    # Fetch comments
+    my $result = $self->_xmlrpc('Bug.comments', $params);
     return unless defined $result;
+
+    my @comments;
+    my $first = 1;
+    for my $c (@{$result->{bugs}->{$bug_id}->{comments}}) {
+        if ($first) {
+            $first = 0;
+            next unless $include_description;
+        }
+        my $when = datetime_from($c->{creation_time});
+        push(@comments,
+            {
+                who => $c->{creator},
+                when => $when,
+                comment => $c->{text},
+                url => $self->_comment_url($bug_id, $c->{count})
+            }
+        );
+    }
+
+    # Fetch changes
+    delete $params->{new_since};
+    $result = $self->_xmlrpc('Bug.history', $params);
+    return unless defined $result;
+
     my @changes;
     my @excluded = $self->_excluded_fields;
     for my $c (@{$result->{bugs}->[0]->{history}}) {
-        next if ($since && $since > datetime_from($c->{when}.'Z'));
+        my $when = datetime_from($c->{when});
+        next if ($since && $since > $when);
         for my $f (@{$c->{changes}}) {
             next if (grep {$_ eq $f->{field_name}} @excluded);
             push(@changes,
                 {
                     who => $c->{who},
-                    when => $c->{when}."Z",
+                    when => $when,
                     field => $f->{field_name},
                     from => $f->{removed},
                     to => $f->{added},
@@ -176,7 +210,24 @@ sub fetch_changes {
             );
         }
     }
-    return \@changes;
+
+    # Sort and group changes by timestamp
+    my @sorted = sort { $a->{when} <=> $b->{when} } (@comments, @changes);
+    my @grouped;
+    my $group = { changes => [] };
+    for my $c (@sorted) {
+        if (defined $group->{when} && $group->{when} != $c->{when}) {
+            push @grouped, $group;
+            $group = { changes => [] };
+        }
+        $group->{when} = delete $c->{when};
+        $group->{who} = delete $c->{who};
+        push @{$group->{changes}}, $c;
+    }
+    if (@{$group->{changes}}) {
+        push @grouped, $group;
+    }
+    return \@grouped;
 }
 
 sub fetch_full {
@@ -188,18 +239,18 @@ sub fetch_full {
     my $raw_data = $result->{bugs}->[0];
     return unless $raw_data;
 
-    my $comments = $self->fetch_comments($url);
-    my $description = shift @$comments;
+    my $changes = $self->fetch_changes($url, undef, 1);
 
-    my $changes = $self->fetch_changes($url);
+    # Description is the first comment that is in the first change set
+    my $first = shift @$changes;
+    my $description = $first->{changes}->[0]->{comment};
 
     return {
         url => $url,
         raw_data => $raw_data,
         fields => $self->_filter_fields($raw_data),
         summary => $raw_data->{summary},
-        description => $description->{text},
-        comments => $comments,
+        description => $description,
         changes => $changes,
     };
 }

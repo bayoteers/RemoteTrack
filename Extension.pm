@@ -175,9 +175,9 @@ sub bug_end_of_create {
             source_id => $source->id,
             active => 1,
             value => $url,
-            last_sync => $timestamp,
         });
         $bug->{remotetrack_url_obj} = $urlobj;
+        $urlobj->sync_from_remote(1);
     }
 }
 
