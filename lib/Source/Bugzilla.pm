@@ -128,33 +128,6 @@ sub id_to_url {
     return $self->options->{base_url} . "show_bug.cgi?id=$id";
 }
 
-sub fetch_comments {
-    my ($self, $url, $since) = @_;
-    my $bug_id = $self->url_to_id($url);
-    my $params = {ids => [$bug_id]};
-    if ($since) {
-        $since = datetime_from($since);
-        $since->set_time_zone('UTC');
-        $params->{new_since} = $since->ymd('').'T'.$since->hms.'Z';
-    }
-    my $result = $self->_xmlrpc('Bug.comments', $params);
-    return unless defined $result;
-    my @comments;
-    return \@comments unless defined $result;
-    for my $c (@{$result->{bugs}->{$bug_id}->{comments}}) {
-        my $when = datetime_from($c->{creation_time}, 'UTC');
-        push(@comments,
-            {
-                who => $c->{creator},
-                when => $when,
-                comment => $c->{text},
-                url => $self->_comment_url($bug_id, $c->{count})
-            }
-        );
-    }
-    return \@comments;
-}
-
 sub fetch_changes {
     my ($self, $url, $since, $include_description) = @_;
     my $bug_id = $self->url_to_id($url);
