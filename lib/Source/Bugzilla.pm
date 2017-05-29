@@ -51,8 +51,17 @@ sub check_options {
                     err => "'$value' is not a valid email address"
                 });
             }
+        } elsif ($key eq 'use_jsonrpc') {
+            $value = $value ? 1 : 0;
+            if ($value) {
+                eval "require JSON::RPC::Client"
+                    or ThrowUserError('invalid_parameter', {
+                        name => 'use_jsonrpc',
+                        err => "Usgin JSON RPC requires JSON::RPC::Client perl module"
+                    });
+            }
         } elsif (any {$key eq $_} qw(post_comments post_changes http_auth)) {
-            $value = $value ? 1 : 0
+            $value = $value ? 1 : 0;
         } elsif (none {$key eq $_} qw(username password excluded_fields) ) {
             $value = undef;
         }
@@ -139,7 +148,7 @@ sub fetch_changes {
     }
 
     # Fetch comments
-    my $result = $self->_xmlrpc('Bug.comments', $params);
+    my $result = $self->_rpc('Bug.comments', $params);
     return unless defined $result;
 
     my @comments;
@@ -162,7 +171,7 @@ sub fetch_changes {
 
     # Fetch changes
     delete $params->{new_since};
-    $result = $self->_xmlrpc('Bug.history', $params);
+    $result = $self->_rpc('Bug.history', $params);
     return unless defined $result;
 
     my @changes;
@@ -207,7 +216,7 @@ sub fetch_full {
     my ($self, $url) = @_;
     my $bug_id = $self->url_to_id($url);
     my $params = {ids => [$bug_id]};
-    my $result = $self->_xmlrpc('Bug.get', $params);
+    my $result = $self->_rpc('Bug.get', $params);
     return unless $result;
     my $raw_data = $result->{bugs}->[0];
     return unless $raw_data;
@@ -278,7 +287,7 @@ sub _post_comment {
     if (!$token) {
         return 0;
     }
-    my $result = $self->_xmlrpc('Bug.add_comment',
+    my $result = $self->_rpc('Bug.add_comment',
         {
             id => $bug_id, comment => $comment, Bugzilla_token => $token,
         }
@@ -313,7 +322,7 @@ sub post_changes {
 sub _rpctoken {
     my $self = shift;
     if (!defined $self->{_rpctoken}) {
-        my $result = $self->_xmlrpc('User.login',
+        my $result = $self->_rpc('User.login',
             {
                 login => $self->options->{username},
                 password => $self->options->{password},
@@ -326,10 +335,60 @@ sub _rpctoken {
     return $self->{_rpctoken};
 }
 
+sub _rpc {
+    my ($self, $method, $params) = @_;
+    if ($self->options->{use_jsonrpc}) {
+        return $self->_jsonrpc($method, $params);
+    } else {
+        return $self->_xmlrpc($method, $params);
+    }
+}
+
+sub _rpc_url {
+    my $self = shift;
+    if (!defined $self->{_rpc_url}) {
+        my $uri = URI->new($self->options->{base_url});
+        my @path = $uri->path_segments();
+        if ($self->options->{use_jsonrpc}) {
+            push(@path, 'jsonrpc.cgi');
+        } else {
+            push(@path, 'xmlrpc.cgi');
+        }
+        $uri->path_segments(@path);
+        if ($self->options->{http_auth}) {
+            my $userinfo = $self->options->{username} . ':' . $self->options->{password};
+            $uri->userinfo($userinfo);
+        }
+        $self->{_rpc_url} = $uri->as_string;
+    }
+    return $self->{_rpc_url};
+}
+
+sub _setup_http_proxy {
+    my ($lwp_ua) = @_;
+    my $proxy_url = Bugzilla->params->{'proxy_url'};
+    if ($proxy_url) {
+        $lwp_ua->proxy->proxy('http' => $proxy_url);
+        if (!$ENV{HTTPS_PROXY}) {
+            # LWP does not handle https over proxy, so by setting the env
+            # variables the proxy connection is handled by underlying library
+            my $pu = URI->new($proxy_url);
+            $ENV{HTTPS_PROXY} = $pu->scheme.'://'.$pu->host.':'.$pu->port;
+            my ($user, $pass) = split(':', $pu->userinfo || "");
+            $ENV{HTTPS_PROXY_USERNAME} = $user if defined $user;
+            $ENV{HTTPS_PROXY_PASSWORD} = $pass if defined $pass;
+        }
+    } else {
+        $lwp_ua->env_proxy;
+    }
+}
+
+# XML RPC wrappers
+
 sub _xmlrpc {
     my ($self, $method, $params) = @_;
 
-    my $response = eval { $self->_rpcproxy->call($method, $params) };
+    my $response = eval { $self->_xmlproxy->call($method, $params) };
     my $err = $@ ? $@ : $response->fault ? $response->faultstring : undef;
     if ($err) {
         local $Data::Dumper::Indent = 0;
@@ -341,34 +400,47 @@ sub _xmlrpc {
     return $response->result;
 }
 
-sub _rpcproxy {
+sub _xmlproxy {
     my $self = shift;
-    if (!defined $self->{_rpcproxy}) {
-        my $uri = URI->new($self->options->{base_url});
-        my @path = $uri->path_segments();
-        push(@path, 'xmlrpc.cgi');
-        $uri->path_segments(@path);
-        if ($self->options->{http_auth}) {
-            my $userinfo = $self->options->{username} . ':' . $self->options->{password};
-            $uri->userinfo($userinfo);
-        }
-        $self->{_rpcproxy} = XMLRPC::Lite->proxy($uri->as_string);
-        my $proxy_url = Bugzilla->params->{'proxy_url'};
-        if ($proxy_url) {
-            $self->{_rpcproxy}->transport->proxy->proxy('http' => $proxy_url);
-            if (!$ENV{HTTPS_PROXY}) {
-                # LWP does not handle https over proxy, so by setting the env
-                # variables the proxy connection is handled by underlying library
-                my $pu = URI->new($proxy_url);
-                $ENV{HTTPS_PROXY} = $pu->scheme.'://'.$pu->host.':'.$pu->port;
-                my ($user, $pass) = split(':', $pu->userinfo || "");
-                $ENV{HTTPS_PROXY_USERNAME} = $user if defined $user;
-                $ENV{HTTPS_PROXY_PASSWORD} = $pass if defined $pass;
-            }
-        } else {
-            $self->{_rpcproxy}->transport->env_proxy;
-        }
+    if (!defined $self->{_xmlproxy}) {
+        my $client = XMLRPC::Lite->proxy($self->_rpc_url);
+        _setup_http_proxy($client->transport);
+        $self->{_xmlproxy} = $client;
     }
-    return $self->{_rpcproxy};
+    return $self->{_xmlproxy};
 }
+
+# JSON RPC wrappers
+
+sub _jsonrpc {
+    my ($self, $method, $params) = @_;
+    my $callobj = {
+        method => $method,
+        params => $params,
+    };
+    my $response = eval {
+        $self->_jsonproxy->call($self->_jsonrpc_url, $callobj);
+    };
+    my $err = $@ ? $@ : $response->is_error ? $response->error_message : undef;
+    if ($err) {
+        local $Data::Dumper::Indent = 0;
+        local $Data::Dumper::Purity = 1;
+        warn "Remote Bugzilla JSONRPC call $method(".Dumper($params).") failed: ". $err;
+        $self->{error} = "Remote call failed: $err";
+        return;
+    }
+    return $response->result;
+}
+
+sub _jsonproxy {
+    my $self = shift;
+    if (!defined $self->{_jsonproxy}) {
+        require JSON::RPC::Client;
+        my $client = new JSON::RPC::Client;
+        _setup_http_proxy($client->ua);
+        $self->{_jsonproxy} = $client;
+    }
+    return $self->{_jsonproxy};
+}
+
 1;
