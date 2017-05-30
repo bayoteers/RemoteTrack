@@ -84,7 +84,7 @@ if ($opts{product}) {
     $params->{product} = $opts{product};
 }
 
-my $result = $source->_xmlrpc('Bug.search', $params);
+my $result = $source->_rpc('Bug.search', $params);
 
 my $total = scalar @{$result->{bugs}};
 print "Total $total bugs to clone\n";
