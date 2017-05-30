@@ -419,7 +419,7 @@ sub _jsonrpc {
         params => $params,
     };
     my $response = eval {
-        $self->_jsonproxy->call($self->_jsonrpc_url, $callobj);
+        $self->_jsonproxy->call($self->_rpc_url, $callobj);
     };
     my $err = $@ ? $@ : $response->is_error ? $response->error_message : undef;
     if ($err) {
