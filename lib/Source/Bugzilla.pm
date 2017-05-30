@@ -438,6 +438,8 @@ sub _jsonproxy {
         require JSON::RPC::Legacy::Client;
         my $client = new JSON::RPC::Legacy::Client;
         _setup_http_proxy($client->ua);
+        # JSON RPC Client sets the timeout to 10 seconds, we need a bit more
+        $client->ua->timeout(180);
         $self->{_jsonproxy} = $client;
     }
     return $self->{_jsonproxy};
