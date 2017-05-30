@@ -54,10 +54,10 @@ sub check_options {
         } elsif ($key eq 'use_jsonrpc') {
             $value = $value ? 1 : 0;
             if ($value) {
-                eval "require JSON::RPC::Client"
+                eval "require JSON::RPC::Legacy::Client"
                     or ThrowUserError('invalid_parameter', {
                         name => 'use_jsonrpc',
-                        err => "Usgin JSON RPC requires JSON::RPC::Client perl module"
+                        err => "Usgin JSON RPC requires JSON::RPC::Legacy::Client perl module, from JSON::RPC > 1.00"
                     });
             }
         } elsif (any {$key eq $_} qw(post_comments post_changes http_auth)) {
@@ -435,8 +435,8 @@ sub _jsonrpc {
 sub _jsonproxy {
     my $self = shift;
     if (!defined $self->{_jsonproxy}) {
-        require JSON::RPC::Client;
-        my $client = new JSON::RPC::Client;
+        require JSON::RPC::Legacy::Client;
+        my $client = new JSON::RPC::Legacy::Client;
         _setup_http_proxy($client->ua);
         $self->{_jsonproxy} = $client;
     }
